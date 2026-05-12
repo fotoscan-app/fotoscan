@@ -85,25 +85,17 @@ export async function POST(req: NextRequest) {
   // AWS Rekognition: face quality scoring
   const qualityScore = await detectFaceQuality(s3Key)
 
-  // AWS Rekognition: index faces
-  let faceIds: string[] = []
-  try {
-    faceIds = await indexFaces(event.rekognitionCollectionId, s3Key)
-  } catch (err) {
-    logger.warn('UPLOAD', 'Face indexing failed', { userId: payload.userId, s3Key })
-  }
-
   const s3Url = cdnUrl(s3Key)
 
-  // Save photo to DB
+  // Save photo to DB first so we have its ID for Rekognition ExternalImageId
   const photo = await db.photo.create({
     data: {
       eventId,
       s3Key,
       thumbnailKey: thumbKey,
       s3Url,
-      faceIds,
-      faceCount: faceIds.length,
+      faceIds: [],
+      faceCount: 0,
       qualityScore,
       labels: labelsResult as object,
       pHash,
@@ -114,6 +106,20 @@ export async function POST(req: NextRequest) {
       isFlagged: modResult.flagged,
     },
   })
+
+  // AWS Rekognition: index faces using photo.id as ExternalImageId
+  let faceIds: string[] = []
+  try {
+    faceIds = await indexFaces(event.rekognitionCollectionId, s3Key, photo.id)
+    if (faceIds.length > 0) {
+      await db.photo.update({
+        where: { id: photo.id },
+        data: { faceIds, faceCount: faceIds.length },
+      })
+    }
+  } catch (err) {
+    logger.warn('UPLOAD', 'Face indexing failed', { userId: payload.userId, s3Key })
+  }
 
   // Create moderation flag if needed
   if (modResult.flagged) {

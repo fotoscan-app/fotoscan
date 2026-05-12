@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { razorpay } from '@/lib/razorpay'
+import { getRazorpay } from '@/lib/razorpay'
 import { PLANS } from '@/lib/plans'
 import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   // Cancel any existing subscription before creating a new one (plan upgrade/downgrade)
   if (user.razorpaySubscriptionId) {
     try {
-      await razorpay.subscriptions.cancel(user.razorpaySubscriptionId, false)
+      await getRazorpay().subscriptions.cancel(user.razorpaySubscriptionId, false)
     } catch { /* already cancelled or expired — continue */ }
     await db.user.update({
       where: { id: user.id },
@@ -40,23 +40,25 @@ export async function POST(req: NextRequest) {
   // Create or reuse Razorpay customer
   let customerId = user.razorpayCustomerId ?? undefined
   if (!customerId) {
-    const customer = await razorpay.customers.create({
+    const rzp = getRazorpay()
+    const customer = await rzp.customers.create({
       name: user.name,
       email: user.email,
       fail_existing: '0',
-    } as unknown as Parameters<typeof razorpay.customers.create>[0])
+    } as unknown as Parameters<typeof rzp.customers.create>[0])
     customerId = (customer as { id: string }).id
     await db.user.update({ where: { id: user.id }, data: { razorpayCustomerId: customerId } })
   }
 
   // Create subscription (120 cycles ≈ 10 years, effectively unlimited)
-  const subscription = await razorpay.subscriptions.create({
+  const rzp = getRazorpay()
+  const subscription = await rzp.subscriptions.create({
     plan_id: plan.razorpayPlanId,
     customer_notify: 1,
     quantity: 1,
     total_count: 120,
     notes: { userId: user.id, planId: plan.id },
-  } as Parameters<typeof razorpay.subscriptions.create>[0])
+  } as Parameters<typeof rzp.subscriptions.create>[0])
 
   logger.info('BILLING', 'Razorpay subscription created', { userId: user.id, plan: plan.id })
 

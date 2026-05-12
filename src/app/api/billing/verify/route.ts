@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import crypto from 'crypto'
-import { razorpay } from '@/lib/razorpay'
+import { getRazorpay } from '@/lib/razorpay'
 import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
 import { planFromRazorpayPlanId } from '@/lib/plans'
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch subscription to get plan details
-  const sub = await razorpay.subscriptions.fetch(razorpay_subscription_id) as {
+  const sub = await getRazorpay().subscriptions.fetch(razorpay_subscription_id) as {
     id: string; plan_id: string; customer_id: string; status: string
   }
 

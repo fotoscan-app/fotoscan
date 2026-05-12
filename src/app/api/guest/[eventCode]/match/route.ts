@@ -32,24 +32,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
   const selfieKey = `selfies/${event.id}/${Date.now()}.jpg`
   await uploadBuffer(selfieKey, selfieBuffer, selfieFile.type)
 
-  // Search faces
-  let matchedFaceIds: string[] = []
+  // Search faces — returns { photoId (ExternalImageId), confidence }[]
+  let matchResults: { photoId: string; confidence: number }[] = []
   try {
-    matchedFaceIds = await searchFacesBySelfie(event.rekognitionCollectionId, selfieKey)
+    matchResults = await searchFacesBySelfie(event.rekognitionCollectionId, selfieKey)
   } catch (err) {
     logger.error('FACE_MATCH', 'Face search failed', { eventId: event.id, errorCode: 'PS-401' })
     return NextResponse.json({ success: false, error: ErrorCodes.FACE_SEARCH_FAILED.message, code: ErrorCodes.FACE_SEARCH_FAILED.code }, { status: 500 })
   }
 
-  if (matchedFaceIds.length === 0) {
-    // Create session with no matches — guest may try again
+  if (matchResults.length === 0) {
     const session = await db.guestSession.create({
       data: {
         eventId: event.id,
         selfieS3Key: selfieKey,
         matchedPhotoIds: [],
         matchCount: 0,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     })
     logger.info('FACE_MATCH', 'No faces matched', { eventId: event.id })
@@ -59,14 +58,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
     })
   }
 
-  // Find photos whose faceIds overlap with matched face IDs
+  // ExternalImageId = photo DB id (set during indexFaces), so match directly by photo id
+  const matchedPhotoIdSet = new Set(matchResults.map(m => m.photoId))
+
   const allPhotos = await db.photo.findMany({
     where: { eventId: event.id, isFlagged: false },
-    select: { id: true, faceIds: true, fileName: true, fileSize: true, thumbnailKey: true, s3Key: true },
+    select: { id: true, fileName: true, fileSize: true, thumbnailKey: true, s3Key: true },
   })
 
-  const matchedSet = new Set(matchedFaceIds)
-  const matchedPhotos = allPhotos.filter(p => p.faceIds.some(fid => matchedSet.has(fid)))
+  const matchedPhotos = allPhotos.filter(p => matchedPhotoIdSet.has(p.id))
   const matchedPhotoIds = matchedPhotos.map(p => p.id)
 
   // Generate presigned download URLs for matched photos

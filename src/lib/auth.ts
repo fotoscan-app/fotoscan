@@ -25,7 +25,7 @@ export async function createToken(payload: { userId: string; email: string }): P
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET)
-    return payload as JWTPayload
+    return payload as unknown as JWTPayload
   } catch {
     return null
   }

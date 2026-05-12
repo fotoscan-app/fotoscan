@@ -83,7 +83,7 @@ export async function detectFaceQuality(s3Key: string): Promise<number> {
   try {
     const res = await rek.send(new DetectFacesCommand({
       Image: { S3Object: { Bucket: BUCKET, Name: s3Key } },
-      Attributes: ['QUALITY'],
+      Attributes: ['ALL'],
     }))
     const faces = res.FaceDetails || []
     if (faces.length === 0) return 0

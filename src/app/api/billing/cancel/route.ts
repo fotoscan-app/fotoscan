@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { razorpay } from '@/lib/razorpay'
+import { getRazorpay } from '@/lib/razorpay'
 import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Cancel at end of current billing cycle (user retains access until period end)
-  await razorpay.subscriptions.cancel(user.razorpaySubscriptionId, true)
+  await getRazorpay().subscriptions.cancel(user.razorpaySubscriptionId, true)
 
   await db.user.update({
     where: { id: payload.userId },
