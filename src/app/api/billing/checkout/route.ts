@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { razorpay } from '@/lib/razorpay'
+import { PLANS } from '@/lib/plans'
+import { db } from '@/lib/db'
+import { verifyToken, COOKIE } from '@/lib/auth'
+import { logger } from '@/lib/logger'
+
+const schema = z.object({ planId: z.enum(['pro', 'business']) })
+
+export async function POST(req: NextRequest) {
+  const token = req.cookies.get(COOKIE)?.value
+  if (!token) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+  const payload = await verifyToken(token)
+  if (!payload) return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 })
+
+  const body = await req.json()
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ success: false, error: 'Invalid plan' }, { status: 400 })
+
+  const plan = PLANS.find(p => p.id === parsed.data.planId)
+  if (!plan?.razorpayPlanId) {
+    return NextResponse.json({ success: false, error: 'Plan not configured — add RAZORPAY_PRO_PLAN_ID / RAZORPAY_BUSINESS_PLAN_ID to .env' }, { status: 400 })
+  }
+
+  const user = await db.user.findUnique({ where: { id: payload.userId } })
+  if (!user) return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 })
+
+  // Cancel any existing subscription before creating a new one (plan upgrade/downgrade)
+  if (user.razorpaySubscriptionId) {
+    try {
+      await razorpay.subscriptions.cancel(user.razorpaySubscriptionId, false)
+    } catch { /* already cancelled or expired — continue */ }
+    await db.user.update({
+      where: { id: user.id },
+      data: { razorpaySubscriptionId: null, razorpayPlanId: null },
+    })
+  }
+
+  // Create or reuse Razorpay customer
+  let customerId = user.razorpayCustomerId ?? undefined
+  if (!customerId) {
+    const customer = await razorpay.customers.create({
+      name: user.name,
+      email: user.email,
+      fail_existing: '0',
+    } as unknown as Parameters<typeof razorpay.customers.create>[0])
+    customerId = (customer as { id: string }).id
+    await db.user.update({ where: { id: user.id }, data: { razorpayCustomerId: customerId } })
+  }
+
+  // Create subscription (120 cycles ≈ 10 years, effectively unlimited)
+  const subscription = await razorpay.subscriptions.create({
+    plan_id: plan.razorpayPlanId,
+    customer_notify: 1,
+    quantity: 1,
+    total_count: 120,
+    notes: { userId: user.id, planId: plan.id },
+  } as Parameters<typeof razorpay.subscriptions.create>[0])
+
+  logger.info('BILLING', 'Razorpay subscription created', { userId: user.id, plan: plan.id })
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      subscriptionId: (subscription as { id: string }).id,
+      keyId: process.env.RAZORPAY_KEY_ID,
+    },
+  })
+}

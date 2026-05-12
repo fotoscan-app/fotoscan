@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  passwordHash         String
+  name                 String
+  businessName         String?
+  logoKey              String?
+  plan                 String   @default("starter")
+  storageUsed          BigInt   @default(0)
+  storageLimit         BigInt   @default(10737418240)
+  isActive             Boolean  @default(true)
+  razorpayCustomerId     String?  @unique
+  razorpaySubscriptionId String?  @unique
+  razorpayPlanId         String?
+  subscriptionStatus     String   @default("active")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  events               Event[]
+}
+
+model Event {
+  id                      String         @id @default(cuid())
+  organizerId             String
+  organizer               User           @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  name                    String
+  description             String?
+  eventDate               DateTime?
+  venue                   String?
+  eventCode               String         @unique
+  status                  String         @default("active")
+  rekognitionCollectionId String         @unique
+  photoCount              Int            @default(0)
+  pendingReviewCount      Int            @default(0)
+  allowGuestDownload      Boolean        @default(true)
+  coverPhotoKey           String?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  photos                  Photo[]
+  guestSessions           GuestSession[]
+}
+
+model Photo {
+  id             String           @id @default(cuid())
+  eventId        String
+  event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  s3Key          String
+  thumbnailKey   String?
+  s3Url          String
+  faceIds        String[]
+  faceCount      Int              @default(0)
+  qualityScore   Float?
+  labels         Json?
+  pHash          String?
+  width          Int?
+  height         Int?
+  fileSize       Int
+  fileName       String
+  isFlagged      Boolean          @default(false)
+  uploadedAt     DateTime         @default(now())
+  moderationFlag ModerationFlag?
+  photoLabels    PhotoLabel[]
+}
+
+model PhotoLabel {
+  id         String @id @default(cuid())
+  photoId    String
+  photo      Photo  @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  label      String
+  confidence Float
+}
+
+model ModerationFlag {
+  id         String   @id @default(cuid())
+  photoId    String   @unique
+  photo      Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  reason     String
+  confidence Float
+  isResolved Boolean  @default(false)
+  action     String?
+  createdAt  DateTime @default(now())
+}
+
+model GuestSession {
+  id              String   @id @default(cuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessionToken    String   @unique @default(cuid())
+  selfieS3Key     String?
+  matchedPhotoIds String[]
+  matchCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+}
