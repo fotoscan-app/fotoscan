@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
     res.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: COOKIE_MAX_AGE, path: '/' })
     return res
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[REGISTER ERROR]', message)
     logger.error('AUTH', 'Register failed', { errorCode: 'PS-500' })
-    return NextResponse.json({ success: false, error: ErrorCodes.SERVER_ERROR.message, code: ErrorCodes.SERVER_ERROR.code }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
