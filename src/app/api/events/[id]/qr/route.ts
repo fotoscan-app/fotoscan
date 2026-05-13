@@ -14,9 +14,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const event = await db.event.findFirst({ where: { id, organizerId: payload.userId } })
   if (!event) return NextResponse.json({ success: false, error: ErrorCodes.EVENT_NOT_FOUND.message }, { status: 404 })
 
-  // Use the request origin so QR works from any host (localhost or IP)
-  const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const guestUrl = `${origin}/e/${event.eventCode}`
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
+  const guestUrl = `${appUrl}/e/${event.eventCode}`
 
   const qrDataUrl = await QRCode.toDataURL(guestUrl, {
     width: 400, margin: 2,
