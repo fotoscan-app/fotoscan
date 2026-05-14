@@ -1,20 +1,20 @@
 'use client'
-import { useState, useRef } from 'react'
+import { Suspense, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const email        = searchParams.get('email') || ''
   const router       = useRouter()
 
-  const [otp, setOtp]           = useState(['', '', '', '', '', ''])
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm]   = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [otp, setOtp]             = useState(['', '', '', '', '', ''])
+  const [password, setPassword]   = useState('')
+  const [confirm, setConfirm]     = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
   const [resending, setResending] = useState(false)
-  const [resent, setResent]     = useState(false)
+  const [resent, setResent]       = useState(false)
   const inputs = useRef<(HTMLInputElement | null)[]>([])
 
   function handleOtpChange(i: number, val: string) {
@@ -77,7 +77,6 @@ export default function ResetPasswordPage() {
 
         <div className="card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* OTP boxes */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Enter OTP</label>
               <div className="flex gap-2 justify-center">
@@ -96,14 +95,12 @@ export default function ResetPasswordPage() {
               </div>
             </div>
 
-            {/* New password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
               <input type="password" required className="input-field" value={password}
                 onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" />
             </div>
 
-            {/* Confirm password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
               <input type="password" required className="input-field" value={confirm}
@@ -133,5 +130,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }

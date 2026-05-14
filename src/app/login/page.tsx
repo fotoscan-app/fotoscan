@@ -1,14 +1,14 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
-  const [email, setEmail]     = useState('')
+function LoginForm() {
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]     = useState('')
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState('')
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [success, setSuccess]   = useState('')
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -53,9 +53,7 @@ export default function LoginPage() {
                 onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input type="password" required className="input-field" value={password}
                 onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
               <div className="text-right mt-1">
@@ -77,5 +75,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
