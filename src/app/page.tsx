@@ -36,7 +36,7 @@ function HeroSlider() {
   }, [next])
 
   return (
-    <section className="relative w-full h-[92vh] min-h-[500px] overflow-hidden">
+    <section className="relative w-full h-[65vh] min-h-[400px] overflow-hidden">
       {SLIDES.map((s, i) => (
         <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
           <Image src={s.src} alt={s.tag} fill className="object-cover" priority={i === 0} />
