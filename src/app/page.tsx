@@ -10,10 +10,10 @@ import {
 
 // ── Slider ────────────────────────────────────────────────────────────────────
 const SLIDES = [
-  { src: '/slider/pic1.png', tag: 'Every Moment, Instantly Shared.',     sub: 'Your event photos delivered to every guest in seconds.' },
-  { src: '/slider/pic2.png', tag: 'Where Memories Meet Instantly.',      sub: 'Reconnect guests with the moments that matter most.' },
-  { src: '/slider/pic3.png', tag: 'Smart Sharing for Smart Events.',     sub: 'Built for corporate events, weddings, and everything in between.' },
-  { src: '/slider/pic4.png', tag: 'No App. Just Scan.',                  sub: 'Guests scan a QR code, upload a selfie — done.' },
+  { src: '/slider/pic1.png', tag: 'Every Moment, Instantly Shared.' },
+  { src: '/slider/pic2.png', tag: 'Where Memories Meet Instantly.' },
+  { src: '/slider/pic3.png', tag: 'Smart Sharing for Smart Events.' },
+  { src: '/slider/pic4.png', tag: 'No App. Just Scan.' },
 ]
 
 function HeroSlider() {
@@ -40,22 +40,6 @@ function HeroSlider() {
       {SLIDES.map((s, i) => (
         <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
           <Image src={s.src} alt={s.tag} fill className="object-cover" priority={i === 0} />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-          <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-20 max-w-3xl">
-            <span className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-3">QuickPik</span>
-            <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4 drop-shadow-lg">
-              {s.tag}
-            </h1>
-            <p className="text-lg md:text-xl text-white/80 mb-8">{s.sub}</p>
-            <div className="flex gap-3 flex-wrap">
-              <Link href="/register" className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-7 py-3 rounded-xl transition-colors shadow-lg">
-                Get started free
-              </Link>
-              <Link href="#how-it-works" className="bg-white/20 hover:bg-white/30 text-white font-semibold px-7 py-3 rounded-xl backdrop-blur-sm transition-colors">
-                See how it works
-              </Link>
-            </div>
-          </div>
         </div>
       ))}
 
