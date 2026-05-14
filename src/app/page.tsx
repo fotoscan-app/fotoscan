@@ -36,10 +36,10 @@ function HeroSlider() {
   }, [next])
 
   return (
-    <section className="relative w-full h-[78vh] min-h-[450px] overflow-hidden">
+    <section className="relative w-full h-[78vh] min-h-[450px] overflow-hidden" style={{ background: '#fdfaf3' }}>
       {SLIDES.map((s, i) => (
         <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-          <Image src={s.src} alt={s.tag} fill className="object-cover" priority={i === 0} />
+          <Image src={s.src} alt={s.tag} fill className="object-contain" priority={i === 0} />
         </div>
       ))}
 
