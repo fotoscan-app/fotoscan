@@ -89,6 +89,17 @@ model ModerationFlag {
   createdAt  DateTime @default(now())
 }
 
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
 model GuestSession {
   id              String   @id @default(cuid())
   eventId         String
