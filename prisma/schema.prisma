@@ -18,6 +18,7 @@ model User {
   storageUsed          BigInt   @default(0)
   storageLimit         BigInt   @default(10737418240)
   isActive             Boolean  @default(true)
+  isAdmin              Boolean  @default(false)
   razorpayCustomerId     String?  @unique
   razorpaySubscriptionId String?  @unique
   razorpayPlanId         String?
