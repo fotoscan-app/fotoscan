@@ -1,6 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 
 function LoginForm() {
@@ -38,10 +39,12 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#fdfaf3' }}>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-extrabold text-brand-600">QuickPik</Link>
+          <Link href="/">
+            <Image src="/logo.jpeg" alt="QuickPik" width={180} height={60} className="object-contain mx-auto" />
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-4">Welcome back</h1>
           <p className="text-gray-500 mt-1">Sign in to your organizer account</p>
         </div>

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', businessName: '' })
@@ -36,7 +37,9 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-bold text-brand-600">QuickPik</Link>
+          <Link href="/">
+            <Image src="/logo.jpeg" alt="QuickPik" width={180} height={60} className="object-contain mx-auto" />
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-4">Create your account</h1>
           <p className="text-gray-500 mt-1">Start sharing event photos in minutes</p>
         </div>

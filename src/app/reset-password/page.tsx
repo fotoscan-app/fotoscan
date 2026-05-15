@@ -1,6 +1,7 @@
 'use client'
 import { Suspense, useState, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function ResetPasswordForm() {
@@ -65,10 +66,12 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#fdfaf3' }}>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-extrabold text-brand-600">QuickPik</Link>
+          <Link href="/">
+            <Image src="/logo.jpeg" alt="QuickPik" width={180} height={60} className="object-contain mx-auto" />
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-4">Reset your password</h1>
           <p className="text-gray-500 mt-1">
             We sent a 6-digit OTP to <span className="font-medium text-gray-700">{email}</span>
@@ -88,8 +91,7 @@ function ResetPasswordForm() {
                     value={d}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKeyDown(i, e)}
-                    className="w-11 h-12 text-center text-xl font-bold rounded-lg border focus:outline-none focus:ring-2"
-                    style={{ borderColor: '#c9aa86', background: '#fdfaf3' }}
+                    className="w-11 h-12 text-center text-xl font-bold rounded-lg border border-brand-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
                   />
                 ))}
               </div>

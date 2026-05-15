@@ -36,7 +36,7 @@ function HeroSlider() {
   }, [next])
 
   return (
-    <section className="relative w-full h-[78vh] min-h-[450px] overflow-hidden" style={{ background: '#fdfaf3' }}>
+    <section className="relative w-full h-[78vh] min-h-[450px] overflow-hidden bg-white">
       {SLIDES.map((s, i) => (
         <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
           <Image src={s.src} alt={s.tag} fill className="object-contain" priority={i === 0} />
@@ -96,8 +96,8 @@ export default function LandingPage() {
 
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          <span className="text-2xl font-extrabold text-brand-600">QuickPik</span>
+        <div className="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between">
+          <Image src="/logo.jpeg" alt="QuickPik" width={140} height={48} className="object-contain" />
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
             <a href="#features"    className="hover:text-brand-600 transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-brand-600 transition-colors">How it works</a>
@@ -262,8 +262,8 @@ export default function LandingPage() {
       <footer className="bg-gray-900 text-gray-400 py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <span className="text-white font-extrabold text-xl">QuickPik</span>
-            <p className="text-xs mt-1">by Anss Studio Pvt. Ltd.</p>
+            <Image src="/logo.jpeg" alt="QuickPik" width={120} height={40} className="object-contain brightness-0 invert" />
+            <p className="text-xs mt-1 text-gray-400">by Anss Studio Pvt. Ltd.</p>
           </div>
           <div className="flex gap-6 text-sm">
             <a href="#features"     className="hover:text-white transition-colors">Features</a>
