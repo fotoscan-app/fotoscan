@@ -42,6 +42,7 @@ model Event {
   photoCount              Int            @default(0)
   pendingReviewCount      Int            @default(0)
   allowGuestDownload      Boolean        @default(true)
+  eventType               String         @default("custom")
   coverPhotoKey           String?
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
@@ -109,6 +110,8 @@ model GuestSession {
   selfieS3Key     String?
   matchedPhotoIds String[]
   matchCount      Int      @default(0)
+  guestName       String   @default("")
+  guestMobile     String   @default("")
   createdAt       DateTime @default(now())
   expiresAt       DateTime
 }

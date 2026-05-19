@@ -47,6 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       venue:              body.venue?.trim()        ?? event.venue,
       status:             body.status               ?? event.status,
       allowGuestDownload: body.allowGuestDownload   ?? event.allowGuestDownload,
+      eventType:          body.eventType            ?? event.eventType,
     },
   })
   return NextResponse.json({ success: true, data: { event: updated } })

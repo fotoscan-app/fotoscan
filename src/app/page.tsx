@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -62,16 +62,33 @@ function HeroSlider() {
   )
 }
 
+// ── useInView ─────────────────────────────────────────────────────────────────
+function useInView(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect() } },
+      { threshold }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [threshold])
+  return { ref, inView }
+}
+
 // ── Features ──────────────────────────────────────────────────────────────────
 const FEATURES = [
-  { icon: FaceSmileIcon,       title: 'AI Face Recognition',    desc: 'AWS-powered AI instantly matches guests to their photos with 99%+ accuracy.',           color: 'bg-blue-50 text-blue-600' },
-  { icon: QrCodeIcon,          title: 'QR Code Access',         desc: 'One unique QR code per event. Display it anywhere — print, screen, or share digitally.', color: 'bg-purple-50 text-purple-600' },
-  { icon: DevicePhoneMobileIcon, title: 'No App Needed',        desc: 'Guests open a link in any browser. No downloads, no sign-ups, no friction.',            color: 'bg-green-50 text-green-600' },
-  { icon: BoltIcon,            title: 'Instant Delivery',       desc: 'Photos appear in seconds after selfie upload — not hours, not days.',                    color: 'bg-amber-50 text-amber-600' },
-  { icon: ShieldCheckIcon,     title: 'Secure & Private',       desc: 'Each guest sees only their own photos. Sessions expire in 24 hours automatically.',      color: 'bg-red-50 text-red-600' },
-  { icon: PhotoIcon,           title: 'Bulk Upload',            desc: 'Upload hundreds of photos at once. Duplicates are auto-detected and rejected.',          color: 'bg-teal-50 text-teal-600' },
-  { icon: SparklesIcon,        title: 'Custom Branding',        desc: 'Add your studio logo and business name. Every touchpoint reflects your brand.',          color: 'bg-pink-50 text-pink-600' },
-  { icon: ArrowDownTrayIcon,   title: 'Guest Downloads',        desc: 'Guests can download full-resolution photos straight to their device.',                   color: 'bg-indigo-50 text-indigo-600' },
+  { icon: FaceSmileIcon,        title: 'AI Face Recognition', desc: 'AWS-powered AI instantly matches guests to their photos with 99%+ accuracy.',           color: 'bg-blue-100 text-blue-600',    bar: 'bg-blue-500',   bg: 'from-white to-blue-50',   glow: 'rgba(59,130,246,0.30)' },
+  { icon: QrCodeIcon,           title: 'QR Code Access',      desc: 'One unique QR code per event. Display it anywhere — print, screen, or share digitally.', color: 'bg-purple-100 text-purple-600', bar: 'bg-purple-500', bg: 'from-white to-purple-50', glow: 'rgba(168,85,247,0.30)' },
+  { icon: DevicePhoneMobileIcon, title: 'No App Needed',      desc: 'Guests open a link in any browser. No downloads, no sign-ups, no friction.',            color: 'bg-green-100 text-green-600',   bar: 'bg-green-500',  bg: 'from-white to-green-50',  glow: 'rgba(34,197,94,0.30)'  },
+  { icon: BoltIcon,             title: 'Instant Delivery',    desc: 'Photos appear in seconds after selfie upload — not hours, not days.',                    color: 'bg-amber-100 text-amber-600',   bar: 'bg-amber-500',  bg: 'from-white to-amber-50',  glow: 'rgba(245,158,11,0.30)' },
+  { icon: ShieldCheckIcon,      title: 'Secure & Private',    desc: 'Each guest sees only their own photos. Sessions expire in 24 hours automatically.',      color: 'bg-red-100 text-red-600',       bar: 'bg-red-500',    bg: 'from-white to-red-50',    glow: 'rgba(239,68,68,0.30)'  },
+  { icon: PhotoIcon,            title: 'Bulk Upload',         desc: 'Upload hundreds of photos at once. Duplicates are auto-detected and rejected.',          color: 'bg-teal-100 text-teal-600',     bar: 'bg-teal-500',   bg: 'from-white to-teal-50',   glow: 'rgba(20,184,166,0.30)' },
+  { icon: SparklesIcon,         title: 'Custom Branding',     desc: 'Add your studio logo and business name. Every touchpoint reflects your brand.',          color: 'bg-pink-100 text-pink-600',     bar: 'bg-pink-500',   bg: 'from-white to-pink-50',   glow: 'rgba(236,72,153,0.30)' },
+  { icon: ArrowDownTrayIcon,    title: 'Guest Downloads',     desc: 'Guests can download full-resolution photos straight to their device.',                   color: 'bg-indigo-100 text-indigo-600', bar: 'bg-indigo-500', bg: 'from-white to-indigo-50', glow: 'rgba(99,102,241,0.30)' },
 ]
 
 // ── How it works ──────────────────────────────────────────────────────────────
@@ -89,6 +106,68 @@ const STATS = [
   { value: '0',       label: 'App downloads needed' },
   { value: '24/7',    label: 'Cloud availability' },
 ]
+
+function FeaturesSection() {
+  const { ref, inView } = useInView(0.1)
+  return (
+    <section id="features" className="features-bg py-28 relative overflow-hidden">
+      {/* Soft radial overlay to blend the dot grid at edges */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/60" />
+
+      <div className="relative max-w-6xl mx-auto px-6">
+        {/* Heading */}
+        <div className={`text-center mb-16 transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+          <span className="inline-block bg-brand-100 text-brand-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+            Why QuickPik
+          </span>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+            Everything your event needs
+          </h2>
+          <p className="text-gray-500 max-w-xl mx-auto text-lg">
+            From AI face recognition to instant delivery — QuickPik handles every step of event photo sharing.
+          </p>
+        </div>
+
+        {/* Cards grid */}
+        <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              style={{ transitionDelay: `${i * 80}ms` }}
+              className={`transition-all duration-500 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
+            >
+              <div
+                className={`feature-card group relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br ${f.bg} shadow-sm h-full`}
+                style={{ '--card-glow': f.glow } as React.CSSProperties}
+              >
+                {/* Colored top bar */}
+                <div className={`h-1.5 ${f.bar}`} />
+
+                {/* Watermark number */}
+                <span className="absolute top-3 right-4 text-7xl font-black text-gray-100 select-none leading-none pointer-events-none">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+
+                <div className="relative p-6 pt-5">
+                  {/* Icon with pulse ring */}
+                  <div className="relative w-16 h-16 mb-5">
+                    <div className={`absolute inset-0 rounded-xl ${f.bar} feature-icon-ring opacity-30`} />
+                    <div className={`relative w-full h-full rounded-xl flex items-center justify-center ${f.color} transition-transform duration-300 group-hover:scale-110`}>
+                      <f.icon className="w-8 h-8" />
+                    </div>
+                  </div>
+
+                  <h3 className="font-bold text-gray-900 text-base mb-2">{f.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export default function LandingPage() {
   return (
@@ -130,26 +209,7 @@ export default function LandingPage() {
       </div>
 
       {/* Features */}
-      <section id="features" className="py-24 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-14">
-            <span className="text-brand-600 text-sm font-semibold uppercase tracking-widest">Why QuickPik</span>
-            <h2 className="text-4xl font-extrabold text-gray-900 mt-2 mb-4">Everything your event needs</h2>
-            <p className="text-gray-500 max-w-xl mx-auto">From AI face recognition to instant delivery — QuickPik handles every step of event photo sharing.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {FEATURES.map(f => (
-              <div key={f.title} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${f.color}`}>
-                  <f.icon className="w-6 h-6" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FeaturesSection />
 
       {/* How it works */}
       <section id="how-it-works" className="py-24 bg-white">

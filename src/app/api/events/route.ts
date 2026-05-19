@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
 import { createCollection } from '@/lib/aws-rekognition'
 import { generateEventCode } from '@/lib/utils'
+import { cdnUrl } from '@/lib/aws-s3'
 import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
 
@@ -23,12 +24,25 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, name: true, description: true, eventDate: true, venue: true,
       eventCode: true, status: true, photoCount: true, pendingReviewCount: true,
-      allowGuestDownload: true, coverPhotoKey: true, createdAt: true,
+      allowGuestDownload: true, eventType: true, coverPhotoKey: true, createdAt: true,
       _count: { select: { guestSessions: true } },
+      photos: { take: 1, orderBy: { uploadedAt: 'asc' }, select: { s3Key: true } },
     },
   })
-  return NextResponse.json({ success: true, data: { events } })
+
+  const eventsWithThumbnails = events.map(({ photos, coverPhotoKey, ...ev }) => ({
+    ...ev,
+    coverPhotoKey,
+    thumbnailUrl: coverPhotoKey
+      ? cdnUrl(coverPhotoKey)
+      : photos[0]?.s3Key
+      ? cdnUrl(photos[0].s3Key)
+      : null,
+  }))
+  return NextResponse.json({ success: true, data: { events: eventsWithThumbnails } })
 }
+
+const EVENT_TYPES = ['wedding', 'corporate', 'sports', 'school', 'custom'] as const
 
 const createSchema = z.object({
   name:               z.string().min(2).max(200),
@@ -36,6 +50,7 @@ const createSchema = z.object({
   eventDate:          z.string().optional(),
   venue:              z.string().max(200).optional(),
   allowGuestDownload: z.boolean().optional(),
+  eventType:          z.enum(EVENT_TYPES).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -47,7 +62,7 @@ export async function POST(req: NextRequest) {
     const parsed = createSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ success: false, error: 'Invalid input' }, { status: 400 })
 
-    const { name, description, eventDate, venue, allowGuestDownload } = parsed.data
+    const { name, description, eventDate, venue, allowGuestDownload, eventType } = parsed.data
     const eventCode = generateEventCode()
     const collectionId = `quickpik-${payload.userId.slice(0, 8)}-${eventCode}`.toLowerCase()
 
@@ -63,6 +78,7 @@ export async function POST(req: NextRequest) {
         eventCode,
         rekognitionCollectionId: collectionId,
         allowGuestDownload: allowGuestDownload ?? true,
+        eventType: eventType ?? 'custom',
       },
     })
 

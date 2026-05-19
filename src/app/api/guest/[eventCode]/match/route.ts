@@ -14,10 +14,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
   })
   if (!event) return NextResponse.json({ success: false, error: ErrorCodes.EVENT_NOT_FOUND.message }, { status: 404 })
 
-  // Accept multipart form with selfie file
+  // Accept multipart form with selfie file + guest details
   const formData = await req.formData()
-  const selfieFile = formData.get('selfie') as File | null
-  if (!selfieFile) return NextResponse.json({ success: false, error: 'No selfie provided.' }, { status: 400 })
+  const selfieFile  = formData.get('selfie')      as File   | null
+  const guestName   = (formData.get('guestName')  as string | null)?.trim()   || ''
+  const guestMobile = (formData.get('guestMobile') as string | null)?.trim()  || ''
+
+  if (!selfieFile)     return NextResponse.json({ success: false, error: 'No selfie provided.' }, { status: 400 })
+  if (!guestName)      return NextResponse.json({ success: false, error: 'Name is required.' }, { status: 400 })
+  if (!guestMobile || guestMobile.replace(/\D/g, '').length < 10)
+    return NextResponse.json({ success: false, error: 'Valid mobile number is required.' }, { status: 400 })
   if (selfieFile.size > MAX_SELFIE_SIZE) {
     return NextResponse.json({ success: false, error: 'Selfie too large. Max 5 MB.' }, { status: 400 })
   }
@@ -48,6 +54,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
         selfieS3Key: selfieKey,
         matchedPhotoIds: [],
         matchCount: 0,
+        guestName,
+        guestMobile,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     })
@@ -86,6 +94,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
       selfieS3Key: selfieKey,
       matchedPhotoIds,
       matchCount: matchedPhotos.length,
+      guestName,
+      guestMobile,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     },
   })

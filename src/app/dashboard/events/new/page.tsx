@@ -7,7 +7,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 export default function NewEventPage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    name: '', description: '', eventDate: '', venue: '', allowGuestDownload: true,
+    name: '', description: '', eventDate: '', venue: '', allowGuestDownload: true, eventType: 'custom',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,6 +53,16 @@ export default function NewEventPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea rows={3} className="input-field resize-none" value={form.description}
               onChange={e => update('description', e.target.value)} placeholder="Optional description for guests…" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Event type *</label>
+            <select className="input-field" value={form.eventType} onChange={e => update('eventType', e.target.value)}>
+              <option value="wedding">Wedding</option>
+              <option value="corporate">Corporate</option>
+              <option value="sports">Sports</option>
+              <option value="school">School</option>
+              <option value="custom">Custom</option>
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

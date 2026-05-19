@@ -2,10 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   ArrowLeftIcon, ArrowUpTrayIcon, QrCodeIcon, ExclamationTriangleIcon,
-  TrashIcon, PhotoIcon, UserGroupIcon, CheckCircleIcon,
+  TrashIcon, PhotoIcon, UserGroupIcon, CheckCircleIcon, PhoneIcon, UserIcon,
 } from '@heroicons/react/24/outline'
 import { formatBytes, formatDate } from '@/lib/utils'
 import ModerationQueue from '@/components/ModerationQueue'
@@ -16,6 +15,11 @@ interface Photo {
   thumbnailKey: string | null; faceCount: number; isFlagged: boolean; uploadedAt: string
 }
 
+interface GuestEntry {
+  id: string; guestName: string | null; guestMobile: string | null
+  matchCount: number; createdAt: string; sessionToken: string
+}
+
 interface Event {
   id: string; name: string; description: string | null; eventDate: string | null
   venue: string | null; status: string; photoCount: number; pendingReviewCount: number
@@ -23,14 +27,19 @@ interface Event {
   photos: Photo[]; _count: { guestSessions: number }
 }
 
+type Tab = 'photos' | 'guests'
+
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const [event, setEvent] = useState<Event | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [showQR, setShowQR] = useState(false)
+  const [event, setEvent]   = useState<Event | null>(null)
+  const [guests, setGuests] = useState<GuestEntry[]>([])
+  const [tab, setTab]       = useState<Tab>('photos')
+  const [loading, setLoading]       = useState(true)
+  const [guestsLoading, setGuestsLoading] = useState(false)
+  const [showQR, setShowQR]             = useState(false)
   const [showModeration, setShowModeration] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [deleting, setDeleting]         = useState(false)
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
@@ -38,6 +47,15 @@ export default function EventDetailPage() {
       .then(d => { if (d.success) setEvent(d.data.event) })
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (tab !== 'guests') return
+    setGuestsLoading(true)
+    fetch(`/api/events/${id}/guests`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setGuests(d.data.guests) })
+      .finally(() => setGuestsLoading(false))
+  }, [tab, id])
 
   async function toggleStatus() {
     if (!event) return
@@ -61,7 +79,7 @@ export default function EventDetailPage() {
   }
 
   if (loading) return <div className="p-8 text-gray-400">Loading…</div>
-  if (!event) return <div className="p-8 text-red-500">Event not found.</div>
+  if (!event)  return <div className="p-8 text-red-500">Event not found.</div>
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -100,8 +118,8 @@ export default function EventDetailPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { icon: PhotoIcon, label: 'Photos', value: event.photoCount },
-          { icon: UserGroupIcon, label: 'Guests', value: event._count.guestSessions },
+          { icon: PhotoIcon,       label: 'Photos',            value: event.photoCount },
+          { icon: UserGroupIcon,   label: 'Guests scanned',    value: event._count.guestSessions },
           { icon: CheckCircleIcon, label: 'Downloads allowed', value: event.allowGuestDownload ? 'Yes' : 'No' },
         ].map((s, i) => (
           <div key={i} className="card p-4 flex items-center gap-3">
@@ -114,33 +132,109 @@ export default function EventDetailPage() {
         ))}
       </div>
 
-      {/* Photo grid */}
-      {event.photos.length === 0 ? (
-        <div className="card p-16 text-center">
-          <PhotoIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
-          <p className="text-gray-500 mb-6">Upload photos so guests can find themselves.</p>
-          <Link href={`/dashboard/events/${id}/upload`} className="btn-primary inline-flex items-center gap-2">
-            <ArrowUpTrayIcon className="w-4 h-4" /> Upload photos
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {event.photos.map(p => (
-            <div key={p.id} className={`relative aspect-square rounded-lg overflow-hidden bg-gray-100 ${p.isFlagged ? 'ring-2 ring-accent-400' : ''}`}>
-              <img src={p.s3Url} alt={p.fileName}
-                className="w-full h-full object-cover" loading="lazy" />
-              {p.isFlagged && (
-                <div className="absolute top-1 right-1 bg-accent-500 rounded-full p-0.5">
-                  <ExclamationTriangleIcon className="w-3 h-3 text-white" />
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 mb-6">
+        {(['photos', 'guests'] as Tab[]).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-5 py-2.5 text-sm font-medium capitalize border-b-2 -mb-px transition-colors ${
+              tab === t
+                ? 'border-brand-600 text-brand-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}>
+            {t === 'guests' ? `Guests (${event._count.guestSessions})` : 'Photos'}
+          </button>
+        ))}
+      </div>
+
+      {/* Photos tab */}
+      {tab === 'photos' && (
+        event.photos.length === 0 ? (
+          <div className="card p-16 text-center">
+            <PhotoIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
+            <p className="text-gray-500 mb-6">Upload photos so guests can find themselves.</p>
+            <Link href={`/dashboard/events/${id}/upload`} className="btn-primary inline-flex items-center gap-2">
+              <ArrowUpTrayIcon className="w-4 h-4" /> Upload photos
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {event.photos.map(p => (
+              <div key={p.id} className={`relative aspect-square rounded-lg overflow-hidden bg-gray-100 ${p.isFlagged ? 'ring-2 ring-accent-400' : ''}`}>
+                <img src={p.s3Url} alt={p.fileName} className="w-full h-full object-cover" loading="lazy" />
+                {p.isFlagged && (
+                  <div className="absolute top-1 right-1 bg-accent-500 rounded-full p-0.5">
+                    <ExclamationTriangleIcon className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
+                  <p className="text-white text-xs truncate">{formatBytes(p.fileSize)}</p>
                 </div>
-              )}
-              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
-                <p className="text-white text-xs truncate">{formatBytes(p.fileSize)}</p>
               </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Guests tab */}
+      {tab === 'guests' && (
+        guestsLoading ? (
+          <div className="text-gray-400 py-8 text-center">Loading guests…</div>
+        ) : guests.length === 0 ? (
+          <div className="card p-16 text-center">
+            <UserGroupIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No guests yet</h3>
+            <p className="text-gray-500">Guests will appear here after they scan the QR code.</p>
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">#</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Name</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Mobile</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Photos matched</th>
+                    <th className="text-left px-5 py-3 text-gray-500 font-medium">Scanned at</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {guests.map((g, i) => (
+                    <tr key={g.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3 text-gray-400">{i + 1}</td>
+                      <td className="px-5 py-3">
+                        <span className="flex items-center gap-2 text-gray-900 font-medium">
+                          <UserIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                          {g.guestName || <span className="text-gray-400 italic">—</span>}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="flex items-center gap-2 text-gray-700">
+                          <PhoneIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                          {g.guestMobile || <span className="text-gray-400 italic">—</span>}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          g.matchCount > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {g.matchCount} photo{g.matchCount !== 1 ? 's' : ''}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-gray-400 whitespace-nowrap">
+                        {new Date(g.createdAt).toLocaleString('en-IN', {
+                          day: '2-digit', month: 'short', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </div>
+        )
       )}
 
       {/* Danger zone */}
@@ -155,7 +249,9 @@ export default function EventDetailPage() {
               {event.status === 'active' ? 'Guests will no longer be able to access this event.' : 'Allow guests to access this event again.'}
             </p>
           </div>
-          <button onClick={toggleStatus} className="btn-secondary text-sm">{event.status === 'active' ? 'Close event' : 'Reopen event'}</button>
+          <button onClick={toggleStatus} className="btn-secondary text-sm">
+            {event.status === 'active' ? 'Close event' : 'Reopen event'}
+          </button>
         </div>
         <hr className="my-4 border-gray-100" />
         <div className="flex items-center justify-between">
@@ -170,7 +266,15 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {showQR && <QRCodeDisplay eventId={id} onClose={() => setShowQR(false)} />}
+      {showQR && (
+        <QRCodeDisplay
+          eventId={id}
+          eventName={event.name}
+          eventDate={event.eventDate}
+          venue={event.venue}
+          onClose={() => setShowQR(false)}
+        />
+      )}
       {showModeration && (
         <ModerationQueue eventId={id} onClose={() => { setShowModeration(false); window.location.reload() }} />
       )}

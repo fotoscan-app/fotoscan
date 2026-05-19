@@ -9,6 +9,28 @@
   }
 }
 
+@keyframes feature-ring {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.feature-icon-ring {
+  animation: feature-ring 2s ease-out infinite;
+}
+
+.feature-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.feature-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 28px 50px -12px var(--card-glow, rgba(0,0,0,0.15));
+}
+
+.features-bg {
+  background-color: #f0f4ff;
+  background-image: radial-gradient(circle, #bfdbfe 1.2px, transparent 1.2px);
+  background-size: 30px 30px;
+}
+
 @layer components {
   .btn-primary {
     @apply bg-brand-600 hover:bg-brand-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
