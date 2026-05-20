@@ -234,6 +234,17 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* Demo video */}
+          <div className="mt-16 rounded-2xl overflow-hidden shadow-xl border border-gray-100 max-w-3xl mx-auto">
+            <video
+              src="/how-it-works.mp4"
+              controls
+              playsInline
+              className="w-full"
+              poster=""
+            />
+          </div>
         </div>
       </section>
 
