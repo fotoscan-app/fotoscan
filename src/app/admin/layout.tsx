@@ -4,7 +4,7 @@ import AdminSidebar from './AdminSidebar'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await getAdminUser()
-  if (!admin) redirect('/login')
+  if (!admin) redirect('/admin/login?error=unauthorized')
 
   return (
     <div className="flex min-h-screen bg-gray-50">
