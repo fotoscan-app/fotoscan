@@ -16,14 +16,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
 
   // Accept multipart form with selfie file + guest details
   const formData = await req.formData()
-  const selfieFile  = formData.get('selfie')      as File   | null
-  const guestName   = (formData.get('guestName')  as string | null)?.trim()   || ''
-  const guestMobile = (formData.get('guestMobile') as string | null)?.trim()  || ''
+  const selfieFile      = formData.get('selfie')         as File   | null
+  const guestName       = (formData.get('guestName')     as string | null)?.trim() || ''
+  const verifiedToken   = (formData.get('verifiedToken') as string | null)?.trim() || ''
 
-  if (!selfieFile)     return NextResponse.json({ success: false, error: 'No selfie provided.' }, { status: 400 })
-  if (!guestName)      return NextResponse.json({ success: false, error: 'Name is required.' }, { status: 400 })
-  if (!guestMobile || guestMobile.replace(/\D/g, '').length < 10)
-    return NextResponse.json({ success: false, error: 'Valid mobile number is required.' }, { status: 400 })
+  if (!selfieFile)    return NextResponse.json({ success: false, error: 'No selfie provided.' }, { status: 400 })
+  if (!guestName)     return NextResponse.json({ success: false, error: 'Name is required.' }, { status: 400 })
+  if (!verifiedToken) return NextResponse.json({ success: false, error: 'Mobile verification required.' }, { status: 400 })
+
+  // Validate verifiedToken — must be from a verified OTP for this event, not expired
+  const otpRecord = await db.whatsappOtp.findUnique({ where: { verifiedToken } })
+  if (!otpRecord || otpRecord.refId !== eventCode.toUpperCase() || otpRecord.expiresAt < new Date()) {
+    return NextResponse.json({ success: false, error: 'Mobile verification expired. Please verify again.' }, { status: 400 })
+  }
+  const guestMobile = otpRecord.mobile
   if (selfieFile.size > MAX_SELFIE_SIZE) {
     return NextResponse.json({ success: false, error: 'Selfie too large. Max 5 MB.' }, { status: 400 })
   }

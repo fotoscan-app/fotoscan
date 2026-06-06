@@ -17,6 +17,7 @@ model User {
   plan                 String   @default("starter")
   storageUsed          BigInt   @default(0)
   storageLimit         BigInt   @default(10737418240)
+  mobile               String?
   isActive             Boolean  @default(true)
   isAdmin              Boolean  @default(false)
   razorpayCustomerId     String?  @unique
@@ -100,6 +101,20 @@ model PasswordReset {
   createdAt DateTime @default(now())
 
   @@index([email])
+}
+
+model WhatsappOtp {
+  id            String   @id @default(cuid())
+  mobile        String
+  code          String
+  purpose       String   // "guest" | "login"
+  refId         String   // eventCode (guest) | userId (login)
+  verifiedToken String?  @unique
+  expiresAt     DateTime
+  used          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([mobile, purpose])
 }
 
 model GuestSession {

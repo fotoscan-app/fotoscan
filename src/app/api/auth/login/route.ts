@@ -5,6 +5,7 @@ import { verifyPassword, createToken, COOKIE, COOKIE_MAX_AGE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
 import { serializeBigInt } from '@/lib/utils'
+import { sendWhatsAppOtp, generateOtp } from '@/lib/whatsapp'
 
 const schema = z.object({
   email:    z.string().email(),
@@ -34,11 +35,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: ErrorCodes.INVALID_CREDENTIALS.message, code: ErrorCodes.INVALID_CREDENTIALS.code }, { status: 401 })
     }
 
+    // If user has a WhatsApp mobile — send OTP instead of logging in directly
+    if (user.mobile) {
+      await db.whatsappOtp.updateMany({
+        where: { purpose: 'login', refId: user.id, used: false },
+        data: { used: true },
+      })
+
+      const code = generateOtp()
+      await db.whatsappOtp.create({
+        data: {
+          mobile: user.mobile,
+          code,
+          purpose: 'login',
+          refId: user.id,
+          expiresAt: new Date(Date.now() + 10 * 60_000),
+        },
+      })
+
+      await sendWhatsAppOtp(user.mobile, code)
+      logger.info('AUTH', 'Login OTP sent', { userId: user.id })
+
+      const maskedMobile = user.mobile.slice(0, -4).replace(/\d/g, '*') + user.mobile.slice(-4)
+      return NextResponse.json({ success: true, data: { otpSent: true, maskedMobile } })
+    }
+
+    // No mobile set — log in directly (backward compatible for existing accounts)
     const token = await createToken({ userId: user.id, email: user.email })
-    logger.info('AUTH', 'Organizer logged in', { userId: user.id })
+    logger.info('AUTH', 'Organizer logged in (no OTP — mobile not set)', { userId: user.id })
 
     const safeUser = { id: user.id, email: user.email, name: user.name, businessName: user.businessName, logoKey: user.logoKey, plan: user.plan, storageUsed: user.storageUsed, storageLimit: user.storageLimit }
-    const res = NextResponse.json({ success: true, data: { user: serializeBigInt(safeUser) } })
+    const res = NextResponse.json({ success: true, data: { otpSent: false, user: serializeBigInt(safeUser) } })
     res.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: COOKIE_MAX_AGE, path: '/' })
     return res
   } catch (err) {

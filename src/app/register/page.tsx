@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', businessName: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', businessName: '', mobile: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -61,6 +61,13 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input type="email" required className="input-field" value={form.email}
                 onChange={e => update('email', e.target.value)} placeholder="you@example.com" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                WhatsApp number <span className="text-gray-400 font-normal">(for login OTP)</span>
+              </label>
+              <input type="tel" className="input-field" value={form.mobile}
+                onChange={e => update('mobile', e.target.value)} placeholder="+91 98765 43210" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>

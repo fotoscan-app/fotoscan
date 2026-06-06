@@ -7,9 +7,11 @@ import { ErrorCodes } from '@/lib/error-codes'
 import { serializeBigInt } from '@/lib/utils'
 
 const schema = z.object({
-  name:     z.string().min(2).max(100),
-  email:    z.string().email(),
-  password: z.string().min(8).max(100),
+  name:         z.string().min(2).max(100),
+  email:        z.string().email(),
+  password:     z.string().min(8).max(100),
+  businessName: z.string().max(100).optional(),
+  mobile:       z.string().max(20).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: 'Invalid input', details: parsed.error.flatten() }, { status: 400 })
     }
-    const { name, email, password } = parsed.data
+    const { name, email, password, businessName, mobile } = parsed.data
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hashPassword(password)
     const user = await db.user.create({
-      data: { name, email, passwordHash },
+      data: { name, email, passwordHash, businessName: businessName || null, mobile: mobile || null },
       select: { id: true, email: true, name: true, businessName: true, plan: true, storageUsed: true, storageLimit: true },
     })
 
