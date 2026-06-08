@@ -53,7 +53,18 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      await sendWhatsAppOtp(user.mobile, code)
+      try {
+        await sendWhatsAppOtp(user.mobile, code)
+      } catch (twilioErr: unknown) {
+        const e = twilioErr as { code?: number; message?: string }
+        logger.error('AUTH', 'WhatsApp OTP send failed', { userId: user.id, code: e?.code, msg: e?.message })
+        // Fall back to direct login so user isn't locked out
+        const token = await createToken({ userId: user.id, email: user.email })
+        const safeUser = { id: user.id, email: user.email, name: user.name, businessName: user.businessName, logoKey: user.logoKey, plan: user.plan, storageUsed: user.storageUsed, storageLimit: user.storageLimit }
+        const res = NextResponse.json({ success: true, data: { otpSent: false, user: serializeBigInt(safeUser) } })
+        res.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: COOKIE_MAX_AGE, path: '/' })
+        return res
+      }
       logger.info('AUTH', 'Login OTP sent', { userId: user.id })
 
       const maskedMobile = user.mobile.slice(0, -4).replace(/\d/g, '*') + user.mobile.slice(-4)
