@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { createToken, COOKIE, COOKIE_MAX_AGE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { serializeBigInt } from '@/lib/utils'
+import { checkVerification } from '@/lib/whatsapp'
 
 const schema = z.object({
   email: z.string().email(),
@@ -20,25 +21,14 @@ export async function POST(req: NextRequest) {
     const { email, code } = parsed.data
 
     const user = await db.user.findUnique({ where: { email } })
-    if (!user) {
+    if (!user || !user.mobile) {
       return NextResponse.json({ success: false, error: 'Invalid OTP.' }, { status: 400 })
     }
 
-    const otp = await db.whatsappOtp.findFirst({
-      where: {
-        purpose: 'login',
-        refId: user.id,
-        used: false,
-        expiresAt: { gte: new Date() },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-
-    if (!otp || otp.code !== code) {
+    const approved = await checkVerification(user.mobile, code)
+    if (!approved) {
       return NextResponse.json({ success: false, error: 'Incorrect or expired OTP. Please try again.' }, { status: 400 })
     }
-
-    await db.whatsappOtp.update({ where: { id: otp.id }, data: { used: true } })
 
     const token = await createToken({ userId: user.id, email: user.email })
     logger.info('AUTH', 'Organizer logged in via WhatsApp OTP', { userId: user.id })

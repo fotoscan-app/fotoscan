@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { normalizeMobile } from '@/lib/whatsapp'
+import { checkVerification, normalizeMobile } from '@/lib/whatsapp'
 import { randomUUID } from 'crypto'
 
 const schema = z.object({
@@ -19,28 +19,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
   const mobile = normalizeMobile(parsed.data.mobile)
   const { code } = parsed.data
 
-  const otp = await db.whatsappOtp.findFirst({
-    where: {
-      mobile,
-      purpose: 'guest',
-      refId: eventCode.toUpperCase(),
-      used: false,
-      expiresAt: { gte: new Date() },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
-
-  if (!otp) return NextResponse.json({ success: false, error: 'OTP expired or not found. Please request a new one.' }, { status: 400 })
-  if (otp.code !== code) return NextResponse.json({ success: false, error: 'Incorrect OTP. Please try again.' }, { status: 400 })
+  const approved = await checkVerification(mobile, code)
+  if (!approved) return NextResponse.json({ success: false, error: 'Incorrect or expired OTP. Please try again.' }, { status: 400 })
 
   const verifiedToken = randomUUID()
 
-  await db.whatsappOtp.update({
-    where: { id: otp.id },
+  await db.whatsappOtp.create({
     data: {
-      used: true,
+      mobile,
+      code: 'verified',
+      purpose: 'guest',
+      refId: eventCode.toUpperCase(),
       verifiedToken,
-      expiresAt: new Date(Date.now() + 15 * 60_000), // 15 min to complete selfie upload
+      used: false,
+      expiresAt: new Date(Date.now() + 15 * 60_000),
     },
   })
 

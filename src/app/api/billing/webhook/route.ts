@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
 
       case 'subscription.halted': {
         if (!sub) break
+        const haltedUser = await db.user.findFirst({ where: { razorpaySubscriptionId: sub.id } })
+        if (!haltedUser) break // not a QuickPik subscription — ignore
         await db.user.update({
           where: { razorpaySubscriptionId: sub.id },
           data: { subscriptionStatus: 'past_due' },
@@ -67,6 +69,9 @@ export async function POST(req: NextRequest) {
       case 'subscription.completed':
       case 'subscription.expired': {
         if (!sub) break
+        // Check this subscription belongs to a QuickPik user before updating
+        const existingUser = await db.user.findFirst({ where: { razorpaySubscriptionId: sub.id } })
+        if (!existingUser) break // event is from another app on same Razorpay account — ignore
         const starter = getPlanById('starter')
         await db.user.update({
           where: { razorpaySubscriptionId: sub.id },

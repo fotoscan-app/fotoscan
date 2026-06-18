@@ -28,6 +28,7 @@ export default function GuestEventPage() {
   const [selfie, setSelfie]             = useState<File | null>(null)
   const [preview, setPreview]           = useState<string | null>(null)
 
+  const [consent, setConsent]     = useState(false)
   const [sending, setSending]     = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -60,6 +61,7 @@ export default function GuestEventPage() {
   async function sendOtp() {
     if (!guestName.trim()) { setError('Please enter your name.'); return }
     if (!validateMobile(guestMobile)) { setError('Please enter a valid mobile number.'); return }
+    if (!consent) { setError('Please agree to the Privacy Policy to continue.'); return }
     setSending(true); setError('')
     try {
       const res  = await fetch(`/api/guest/${eventCode}/send-otp`, {
@@ -213,9 +215,21 @@ export default function GuestEventPage() {
                 <p className="text-xs text-gray-400 mt-1">OTP will be sent to this WhatsApp number</p>
               </div>
 
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-0.5 shrink-0" checked={consent}
+                  onChange={e => setConsent(e.target.checked)} />
+                <span className="text-xs text-gray-500">
+                  I agree to the{' '}
+                  <a href="/privacy-policy" target="_blank" className="text-brand-600 underline">Privacy Policy</a>
+                  {' '}and{' '}
+                  <a href="/terms" target="_blank" className="text-brand-600 underline">Terms of Service</a>.
+                  My phone number and selfie are used only to find my photos and will not be stored.
+                </span>
+              </label>
+
               {error && <p className="text-red-500 text-sm">{error}</p>}
 
-              <button onClick={sendOtp} disabled={sending}
+              <button onClick={sendOtp} disabled={sending || !consent}
                 className="btn-primary w-full flex items-center justify-center gap-2 py-3">
                 {sending ? 'Sending OTP…' : 'Send OTP on WhatsApp'}
               </button>

@@ -1,11 +1,7 @@
 import twilio from 'twilio'
 
 function getClient() {
-  return twilio(
-    process.env.TWILIO_API_KEY!,
-    process.env.TWILIO_API_SECRET!,
-    { accountSid: process.env.TWILIO_ACCOUNT_SID! }
-  )
+  return twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!)
 }
 
 export function normalizeMobile(mobile: string): string {
@@ -15,26 +11,21 @@ export function normalizeMobile(mobile: string): string {
   return `+91${cleaned}`
 }
 
-export async function sendWhatsAppOtp(mobile: string, otp: string): Promise<void> {
+export async function sendVerification(mobile: string): Promise<void> {
   const client = getClient()
-  const to = `whatsapp:${normalizeMobile(mobile)}`
-
-  if (process.env.TWILIO_OTP_TEMPLATE_SID) {
-    await client.messages.create({
-      from: process.env.TWILIO_WHATSAPP_FROM!,
-      to,
-      contentSid: process.env.TWILIO_OTP_TEMPLATE_SID,
-      contentVariables: JSON.stringify({ '1': otp }),
-    } as Parameters<typeof client.messages.create>[0])
-  } else {
-    await client.messages.create({
-      from: process.env.TWILIO_WHATSAPP_FROM!,
-      to,
-      body: `Your QuickPik verification code is: *${otp}*\n\nExpires in 10 minutes. Do not share it with anyone.`,
-    })
-  }
+  await client.verify.v2
+    .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+    .verifications.create({ to: normalizeMobile(mobile), channel: 'sms' })
 }
 
-export function generateOtp(): string {
-  return String(Math.floor(100000 + Math.random() * 900000))
+export async function checkVerification(mobile: string, code: string): Promise<boolean> {
+  const client = getClient()
+  try {
+    const check = await client.verify.v2
+      .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+      .verificationChecks.create({ to: normalizeMobile(mobile), code })
+    return check.status === 'approved'
+  } catch {
+    return false
+  }
 }

@@ -88,6 +88,23 @@ export const PLANS: Plan[] = [
     ],
   },
   {
+    id: 'studio',
+    name: 'Studio',
+    razorpayPlanId: process.env.RAZORPAY_STUDIO_PLAN_ID ?? null,
+    priceINR: 4499,
+    storageLimit: 100 * 1024 ** 3,      // 100 GB
+    eventLimit: 40,
+    scanLimit: 20000,
+    features: [
+      '40 events / month',
+      '100 GB storage',
+      '20,000 face scans / month',
+      'Custom branding',
+      'Priority support',
+      `Top-up: 5 extra events for ₹${TOPUP_PACK.priceINR}`,
+    ],
+  },
+  {
     id: 'business',
     name: 'Business',
     razorpayPlanId: process.env.RAZORPAY_BUSINESS_PLAN_ID ?? null,

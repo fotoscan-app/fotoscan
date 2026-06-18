@@ -1,11 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { sendWhatsAppOtp, generateOtp, normalizeMobile } from '@/lib/whatsapp'
+import { sendVerification, normalizeMobile } from '@/lib/whatsapp'
 
 const schema = z.object({ mobile: z.string().min(7).max(20) })
 
+// Simple in-process rate limiter: max 5 OTP requests per IP per 10 minutes
+const ipAttempts = new Map<string, { count: number; resetAt: number }>()
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = ipAttempts.get(ip)
+  if (!entry || entry.resetAt < now) {
+    ipAttempts.set(ip, { count: 1, resetAt: now + 10 * 60_000 })
+    return false
+  }
+  if (entry.count >= 5) return true
+  entry.count++
+  return false
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ eventCode: string }> }) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  if (isRateLimited(ip)) {
+    return NextResponse.json({ success: false, error: 'Too many requests. Please wait 10 minutes.' }, { status: 429 })
+  }
+
   try {
     const { eventCode } = await params
 
@@ -21,48 +41,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
 
     const mobile = normalizeMobile(parsed.data.mobile)
 
-    // Rate limit: one OTP per 60 seconds per mobile+event
-    const recent = await db.whatsappOtp.findFirst({
-      where: {
-        mobile,
-        purpose: 'guest',
-        refId: eventCode.toUpperCase(),
-        createdAt: { gte: new Date(Date.now() - 60_000) },
-      },
-    })
-    if (recent) {
-      return NextResponse.json({ success: false, error: 'Please wait 60 seconds before requesting another OTP.' }, { status: 429 })
-    }
-
-    // Invalidate previous unused OTPs for this mobile+event
-    await db.whatsappOtp.updateMany({
-      where: { mobile, purpose: 'guest', refId: eventCode.toUpperCase(), used: false },
-      data: { used: true },
-    })
-
-    const code = generateOtp()
-    const expiresAt = new Date(Date.now() + 10 * 60_000)
-
-    await db.whatsappOtp.create({
-      data: { mobile, code, purpose: 'guest', refId: eventCode.toUpperCase(), expiresAt },
-    })
-
-    await sendWhatsAppOtp(mobile, code)
+    await sendVerification(mobile)
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {
     const twilioErr = err as { code?: number; message?: string; status?: number }
     console.error('[SEND-OTP]', twilioErr?.code, twilioErr?.message)
 
-    // Twilio sandbox: recipient hasn't joined the sandbox
-    if (twilioErr?.code === 63016 || twilioErr?.message?.includes('not opted in')) {
-      return NextResponse.json({
-        success: false,
-        error: 'This number has not joined the WhatsApp sandbox. Please send "join twilio-trial" to +17372583478 on WhatsApp first.',
-      }, { status: 400 })
+    if (twilioErr?.code === 60203) {
+      return NextResponse.json({ success: false, error: 'Too many attempts. Please wait before requesting another OTP.' }, { status: 429 })
     }
-
-    // Twilio: invalid number
     if (twilioErr?.code === 21211 || twilioErr?.code === 21614) {
       return NextResponse.json({ success: false, error: 'Invalid mobile number. Please check and try again.' }, { status: 400 })
     }

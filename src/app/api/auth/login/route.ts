@@ -5,7 +5,7 @@ import { verifyPassword, createToken, COOKIE, COOKIE_MAX_AGE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
 import { serializeBigInt } from '@/lib/utils'
-import { sendWhatsAppOtp, generateOtp } from '@/lib/whatsapp'
+import { sendVerification } from '@/lib/whatsapp'
 
 const schema = z.object({
   email:    z.string().email(),
@@ -37,24 +37,11 @@ export async function POST(req: NextRequest) {
 
     // If user has a WhatsApp mobile — send OTP instead of logging in directly
     if (user.mobile) {
-      await db.whatsappOtp.updateMany({
-        where: { purpose: 'login', refId: user.id, used: false },
-        data: { used: true },
-      })
-
-      const code = generateOtp()
-      await db.whatsappOtp.create({
-        data: {
-          mobile: user.mobile,
-          code,
-          purpose: 'login',
-          refId: user.id,
-          expiresAt: new Date(Date.now() + 10 * 60_000),
-        },
-      })
-
       try {
-        await sendWhatsAppOtp(user.mobile, code)
+        await sendVerification(user.mobile)
+        logger.info('AUTH', 'Login OTP sent', { userId: user.id })
+        const maskedMobile = user.mobile.slice(0, -4).replace(/\d/g, '*') + user.mobile.slice(-4)
+        return NextResponse.json({ success: true, data: { otpSent: true, maskedMobile } })
       } catch (twilioErr: unknown) {
         const e = twilioErr as { code?: number; message?: string }
         logger.error('AUTH', 'WhatsApp OTP send failed', { userId: user.id, code: e?.code, msg: e?.message })
@@ -65,13 +52,9 @@ export async function POST(req: NextRequest) {
         res.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: COOKIE_MAX_AGE, path: '/' })
         return res
       }
-      logger.info('AUTH', 'Login OTP sent', { userId: user.id })
-
-      const maskedMobile = user.mobile.slice(0, -4).replace(/\d/g, '*') + user.mobile.slice(-4)
-      return NextResponse.json({ success: true, data: { otpSent: true, maskedMobile } })
     }
 
-    // No mobile set — log in directly (backward compatible for existing accounts)
+    // No mobile set — log in directly
     const token = await createToken({ userId: user.id, email: user.email })
     logger.info('AUTH', 'Organizer logged in (no OTP — mobile not set)', { userId: user.id })
 

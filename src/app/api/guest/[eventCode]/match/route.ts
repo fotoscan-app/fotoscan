@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { uploadBuffer, getPresignedDownloadUrl, cdnUrl } from '@/lib/aws-s3'
+import { uploadBuffer, getPresignedDownloadUrl, cdnUrl, deleteObject } from '@/lib/aws-s3'
 import { searchFacesBySelfie } from '@/lib/aws-rekognition'
 import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
@@ -26,9 +26,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
 
   // Validate verifiedToken — must be from a verified OTP for this event, not expired
   const otpRecord = await db.whatsappOtp.findUnique({ where: { verifiedToken } })
-  if (!otpRecord || otpRecord.refId !== eventCode.toUpperCase() || otpRecord.expiresAt < new Date()) {
+  if (!otpRecord || otpRecord.refId !== eventCode.toUpperCase() || otpRecord.expiresAt < new Date() || otpRecord.used) {
     return NextResponse.json({ success: false, error: 'Mobile verification expired. Please verify again.' }, { status: 400 })
   }
+  await db.whatsappOtp.update({ where: { verifiedToken }, data: { used: true } })
   const guestMobile = otpRecord.mobile
   if (selfieFile.size > MAX_SELFIE_SIZE) {
     return NextResponse.json({ success: false, error: 'Selfie too large. Max 5 MB.' }, { status: 400 })
@@ -53,11 +54,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
     return NextResponse.json({ success: false, error: ErrorCodes.FACE_SEARCH_FAILED.message, code: ErrorCodes.FACE_SEARCH_FAILED.code }, { status: 500 })
   }
 
+  // Delete selfie from S3 immediately after matching — biometric data must not be retained
+  deleteObject(selfieKey).catch(() => {})
+
   if (matchResults.length === 0) {
     const session = await db.guestSession.create({
       data: {
         eventId: event.id,
-        selfieS3Key: selfieKey,
+        selfieS3Key: null,
         matchedPhotoIds: [],
         matchCount: 0,
         guestName,
@@ -97,7 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
   const session = await db.guestSession.create({
     data: {
       eventId: event.id,
-      selfieS3Key: selfieKey,
+      selfieS3Key: null,
       matchedPhotoIds,
       matchCount: matchedPhotos.length,
       guestName,
