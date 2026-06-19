@@ -57,57 +57,79 @@ export default function BillingPage() {
     if (!user) return
     setUpgrading(planId)
 
-    const res = await fetch('/api/billing/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId }),
-    })
-    const d = await res.json()
-    if (!d.success) {
-      alert(d.error ?? 'Could not start checkout')
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      })
+      const d = await res.json()
+      if (!d.success) {
+        alert(d.error ?? 'Could not start checkout')
+        setUpgrading(null)
+        return
+      }
+
+      const loaded = await loadRazorpayScript()
+      if (!loaded) {
+        alert('Could not load payment gateway. Check your internet connection.')
+        setUpgrading(null)
+        return
+      }
+
+      const RazorpayConstructor = (window as typeof window & { Razorpay?: new (o: object) => { open(): void; on(event: string, cb: (resp: { error: { description: string } }) => void): void } }).Razorpay
+      if (!RazorpayConstructor) {
+        alert('Payment gateway failed to initialise. Please disable any ad-blockers and try again.')
+        setUpgrading(null)
+        return
+      }
+
+      const planName = PLANS.find(p => p.id === planId)?.name ?? planId
+
+      const options = {
+        key: d.data.keyId,
+        subscription_id: d.data.subscriptionId,
+        name: 'QuickPik',
+        description: `${planName} Plan — Monthly`,
+        prefill: { email: user.email, name: user.name },
+        theme: { color: '#0ea5e9' },
+        handler: async function (response: {
+          razorpay_payment_id: string
+          razorpay_subscription_id: string
+          razorpay_signature: string
+        }) {
+          try {
+            const verifyRes = await fetch('/api/billing/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response),
+            })
+            const verifyData = await verifyRes.json()
+            if (verifyData.success) {
+              window.location.href = '/dashboard/billing?success=1'
+            } else {
+              alert('Payment received but verification failed. Your account will be updated shortly, or contact support.')
+              setUpgrading(null)
+            }
+          } catch {
+            alert('Payment received but could not verify. Please contact support with your payment ID: ' + response.razorpay_payment_id)
+            setUpgrading(null)
+          }
+        },
+        modal: { ondismiss: () => setUpgrading(null) },
+      }
+
+      const rzp = new RazorpayConstructor(options)
+      rzp.on('payment.failed', (resp: { error: { description: string } }) => {
+        alert('Payment failed: ' + (resp.error?.description ?? 'Unknown error'))
+        setUpgrading(null)
+      })
+      rzp.open()
+    } catch (err) {
+      console.error('Checkout error:', err)
+      alert('Something went wrong opening the payment gateway. Please try again.')
       setUpgrading(null)
-      return
     }
-
-    const loaded = await loadRazorpayScript()
-    if (!loaded) {
-      alert('Could not load payment gateway. Check your internet connection.')
-      setUpgrading(null)
-      return
-    }
-
-    const planName = PLANS.find(p => p.id === planId)?.name ?? planId
-
-    const options = {
-      key: d.data.keyId,
-      subscription_id: d.data.subscriptionId,
-      name: 'QuickPik',
-      description: `${planName} Plan — Monthly`,
-      prefill: { email: user.email, name: user.name },
-      theme: { color: '#0ea5e9' },
-      handler: async function (response: {
-        razorpay_payment_id: string
-        razorpay_subscription_id: string
-        razorpay_signature: string
-      }) {
-        const verifyRes = await fetch('/api/billing/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(response),
-        })
-        const verifyData = await verifyRes.json()
-        if (verifyData.success) {
-          window.location.href = '/dashboard/billing?success=1'
-        } else {
-          alert('Payment received but verification failed. Your account will be updated shortly, or contact support.')
-          setUpgrading(null)
-        }
-      },
-      modal: { ondismiss: () => setUpgrading(null) },
-    }
-
-    const rzp = new (window as typeof window & { Razorpay: new (o: typeof options) => { open(): void } }).Razorpay(options)
-    rzp.open()
   }
 
   async function simulateUpgrade(planId: string) {
