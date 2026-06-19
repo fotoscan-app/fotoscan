@@ -14,6 +14,7 @@ interface Customer {
 const PLAN_BADGE: Record<string, string> = {
   starter:  'bg-gray-100 text-gray-600',
   pro:      'bg-brand-50 text-brand-700',
+  studio:   'bg-amber-50 text-amber-700',
   business: 'bg-purple-50 text-purple-700',
 }
 

@@ -38,7 +38,7 @@ export default function AdminOverviewPage() {
   if (loading) return <div className="text-gray-400 text-sm">Loading…</div>
   if (!stats)  return <div className="text-red-500 text-sm">Failed to load stats.</div>
 
-  const planOrder = ['starter', 'pro', 'business']
+  const planOrder = ['starter', 'pro', 'studio', 'business']
 
   return (
     <div className="space-y-8">
@@ -67,8 +67,9 @@ export default function AdminOverviewPage() {
             const total = stats.totalUsers || 1
             const pct   = Math.round((count / total) * 100)
             const colors: Record<string, string> = {
-              starter: 'bg-gray-100 text-gray-600',
-              pro:     'bg-brand-50 text-brand-700',
+              starter:  'bg-gray-100 text-gray-600',
+              pro:      'bg-brand-50 text-brand-700',
+              studio:   'bg-amber-50 text-amber-700',
               business: 'bg-purple-50 text-purple-700',
             }
             return (
