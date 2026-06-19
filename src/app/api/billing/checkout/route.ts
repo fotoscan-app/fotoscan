@@ -71,8 +71,10 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    logger.error('BILLING', 'Checkout failed', { userId: user.id, plan: plan.id, error: msg })
+    // Razorpay SDK throws plain objects, not Error instances
+    const rzpErr = err as { error?: { description?: string; code?: string }; statusCode?: number }
+    const msg = rzpErr?.error?.description ?? rzpErr?.error?.code ?? (err instanceof Error ? err.message : JSON.stringify(err))
+    logger.error('BILLING', 'Checkout failed', { userId: user.id, plan: plan.id, error: JSON.stringify(err) })
     return NextResponse.json({ success: false, error: `Payment setup failed: ${msg}` }, { status: 500 })
   }
 }
