@@ -90,6 +90,7 @@ export default function BillingPage() {
         key: d.data.keyId,
         subscription_id: d.data.subscriptionId,
         name: 'QuickPik',
+        image: 'https://www.quickpik.in/logo.jpeg',
         description: `${planName} Plan — Monthly`,
         prefill: { email: user.email, name: user.name },
         theme: { color: '#0ea5e9' },
