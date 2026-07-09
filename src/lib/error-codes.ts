@@ -15,6 +15,7 @@ export const ErrorCodes = {
   PHOTO_NOT_FOUND:        { code: 'PS-205', message: 'Photo not found' },
   USER_NOT_FOUND:         { code: 'PS-206', message: 'User not found' },
   FORBIDDEN:              { code: 'PS-207', message: 'You do not have permission to do this' },
+  FOLDER_NOT_FOUND:       { code: 'PS-208', message: 'Folder not found' },
 
   // Upload PS-3xx
   INVALID_FILE_TYPE:      { code: 'PS-301', message: 'File type not allowed. Accepted: jpg, png, webp, heic' },
@@ -24,6 +25,7 @@ export const ErrorCodes = {
   DUPLICATE_PHOTO:        { code: 'PS-305', message: 'This photo already exists in the event' },
   UPLOAD_URL_EXPIRED:     { code: 'PS-306', message: 'Upload session expired — please try again' },
   PHOTO_FLAGGED:          { code: 'PS-307', message: 'Photo added to Pending Review queue' },
+  DUPLICATE_FOLDER_NAME:  { code: 'PS-308', message: 'A folder with this name already exists in this event' },
 
   // Face Matching PS-4xx
   FACE_SEARCH_FAILED:     { code: 'PS-400', message: 'Face search failed — please try again' },

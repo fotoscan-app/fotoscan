@@ -27,6 +27,7 @@ const schema = z.object({
   s3Key:    z.string().min(1),
   fileName: z.string().min(1).max(255),
   fileSize: z.number().int().positive(),
+  folderId: z.string().min(1).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -39,10 +40,15 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ success: false, error: 'Invalid input' }, { status: 400 })
 
-  const { eventId, s3Key, fileName, fileSize } = parsed.data
+  const { eventId, s3Key, fileName, fileSize, folderId } = parsed.data
 
   const event = await db.event.findFirst({ where: { id: eventId, organizerId: payload.userId } })
   if (!event) return NextResponse.json({ success: false, error: ErrorCodes.EVENT_NOT_FOUND.message }, { status: 404 })
+
+  if (folderId) {
+    const folder = await db.folder.findFirst({ where: { id: folderId, eventId } })
+    if (!folder) return NextResponse.json({ success: false, error: ErrorCodes.FOLDER_NOT_FOUND.message, code: ErrorCodes.FOLDER_NOT_FOUND.code }, { status: 404 })
+  }
 
   // Layer 4: MIME magic bytes validation from S3
   const mimeValid = await validateMimeFromS3(s3Key)
@@ -91,6 +97,7 @@ export async function POST(req: NextRequest) {
   const photo = await db.photo.create({
     data: {
       eventId,
+      folderId: folderId ?? null,
       s3Key,
       thumbnailKey: thumbKey,
       s3Url,
@@ -162,7 +169,7 @@ export async function POST(req: NextRequest) {
     success: true,
     data: {
       photo: {
-        id: photo.id, fileName, fileSize, s3Url,
+        id: photo.id, fileName, fileSize, s3Url, folderId: photo.folderId,
         faceCount: faceIds.length, qualityScore,
         isFlagged: modResult.flagged,
         flagReason: modResult.flagged ? modResult.reason : null,

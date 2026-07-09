@@ -1,9 +1,9 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useDropzone } from 'react-dropzone'
-import { ArrowLeftIcon, CheckCircleIcon, ExclamationCircleIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CheckCircleIcon, ExclamationCircleIcon, CloudArrowUpIcon, FolderIcon, PlusIcon } from '@heroicons/react/24/outline'
 import imageCompression from 'browser-image-compression'
 import { formatBytes } from '@/lib/utils'
 
@@ -13,10 +13,41 @@ interface UploadFile {
   error?: string
 }
 
+interface FolderOption { id: string; name: string }
+
 export default function UploadPage() {
   const { id: eventId } = useParams<{ id: string }>()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [uploading, setUploading] = useState(false)
+
+  const [folders, setFolders]           = useState<FolderOption[]>([])
+  const [folderId, setFolderId]         = useState<string>('') // '' = no folder
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [newFolderName, setNewFolderName]   = useState('')
+  const [folderError, setFolderError]       = useState('')
+
+  useEffect(() => {
+    fetch(`/api/events/${eventId}/folders`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setFolders(d.data.folders) })
+  }, [eventId])
+
+  async function createFolder() {
+    const name = newFolderName.trim()
+    if (!name) return
+    setFolderError('')
+    const res = await fetch(`/api/events/${eventId}/folders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    const d = await res.json()
+    if (!d.success) { setFolderError(d.error || 'Could not create folder.'); return }
+    setFolders(prev => [...prev, d.data.folder])
+    setFolderId(d.data.folder.id)
+    setNewFolderName('')
+    setCreatingFolder(false)
+  }
 
   const onDrop = useCallback((accepted: File[]) => {
     const newFiles: UploadFile[] = accepted.map(f => ({
@@ -93,6 +124,7 @@ export default function UploadPage() {
           body: JSON.stringify({
             eventId, s3Key: presignData.data.s3Key,
             fileName: item.name, fileSize: fileToUpload.size,
+            folderId: folderId || undefined,
           }),
         })
         completeData = await completeRes.json()
@@ -135,7 +167,45 @@ export default function UploadPage() {
         <ArrowLeftIcon className="w-4 h-4" /> Back to event
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Upload photos</h1>
-      <p className="text-gray-500 mb-8">JPEG, PNG, or WebP. Max 20 MB per photo. AI will process each photo after upload.</p>
+      <p className="text-gray-500 mb-6">JPEG, PNG, or WebP. Max 20 MB per photo. AI will process each photo after upload.</p>
+
+      {/* Folder picker */}
+      <div className="card p-4 mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          <FolderIcon className="w-4 h-4 text-gray-400" /> Upload into folder
+        </label>
+        {!creatingFolder ? (
+          <div className="flex items-center gap-2">
+            <select
+              className="input-field flex-1"
+              value={folderId}
+              disabled={uploading}
+              onChange={e => setFolderId(e.target.value)}
+            >
+              <option value="">No folder (uncategorized)</option>
+              {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setCreatingFolder(true)} disabled={uploading}
+              className="btn-secondary flex items-center gap-1 text-sm shrink-0">
+              <PlusIcon className="w-4 h-4" /> New folder
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="text" autoFocus className="input-field flex-1"
+              placeholder="Folder name (e.g. Ceremony, Reception)"
+              value={newFolderName}
+              onChange={e => setNewFolderName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName('') } }}
+            />
+            <button type="button" onClick={createFolder} className="btn-primary text-sm shrink-0">Create</button>
+            <button type="button" onClick={() => { setCreatingFolder(false); setNewFolderName('') }}
+              className="text-sm text-gray-400 hover:text-gray-600 shrink-0">Cancel</button>
+          </div>
+        )}
+        {folderError && <p className="text-red-500 text-sm mt-2">{folderError}</p>}
+      </div>
 
       {/* Drop zone */}
       <div {...getRootProps()} className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors mb-6 ${
