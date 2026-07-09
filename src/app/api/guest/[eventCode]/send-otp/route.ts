@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { randomUUID } from 'crypto'
 import { db } from '@/lib/db'
 import { sendVerification, normalizeMobile } from '@/lib/whatsapp'
 
@@ -41,9 +42,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
 
     const mobile = normalizeMobile(parsed.data.mobile)
 
+    // Skip OTP for a mobile number that has already completed guest verification before
+    // (any event) — issue a fresh verifiedToken directly instead of texting a new code.
+    const priorVerification = await db.whatsappOtp.findFirst({
+      where: { mobile, purpose: 'guest' },
+      select: { id: true },
+    })
+
+    if (priorVerification) {
+      const verifiedToken = randomUUID()
+      await db.whatsappOtp.create({
+        data: {
+          mobile,
+          code: 'verified',
+          purpose: 'guest',
+          refId: eventCode.toUpperCase(),
+          verifiedToken,
+          used: false,
+          expiresAt: new Date(Date.now() + 15 * 60_000),
+        },
+      })
+      return NextResponse.json({ success: true, data: { otpRequired: false, verifiedToken } })
+    }
+
     await sendVerification(mobile)
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, data: { otpRequired: true } })
   } catch (err: unknown) {
     const twilioErr = err as { code?: number; message?: string; status?: number }
     console.error('[SEND-OTP]', twilioErr?.code, twilioErr?.message)

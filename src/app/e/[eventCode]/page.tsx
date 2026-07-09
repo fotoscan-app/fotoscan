@@ -71,6 +71,11 @@ export default function GuestEventPage() {
       })
       const data = await res.json()
       if (!data.success) { setError(data.error || 'Failed to send OTP.'); return }
+      if (data.data.otpRequired === false) {
+        setVerifiedToken(data.data.verifiedToken)
+        setStep('selfie')
+        return
+      }
       setStep('otp')
       setCountdown(60)
       setTimeout(() => otpInputRef.current?.focus(), 100)

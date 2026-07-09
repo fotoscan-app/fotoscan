@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { createToken, COOKIE, COOKIE_MAX_AGE } from '@/lib/auth'
+import { createToken, COOKIE, COOKIE_MAX_AGE, createTrustedDeviceToken, TRUSTED_DEVICE_COOKIE, TRUSTED_DEVICE_MAX_AGE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { serializeBigInt } from '@/lib/utils'
 import { checkVerification } from '@/lib/whatsapp'
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     const safeUser = { id: user.id, email: user.email, name: user.name, businessName: user.businessName, logoKey: user.logoKey, plan: user.plan, storageUsed: user.storageUsed, storageLimit: user.storageLimit }
     const res = NextResponse.json({ success: true, data: { user: serializeBigInt(safeUser) } })
     res.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: COOKIE_MAX_AGE, path: '/' })
+    res.cookies.set(TRUSTED_DEVICE_COOKIE, await createTrustedDeviceToken(user.id), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: TRUSTED_DEVICE_MAX_AGE, path: '/' })
     return res
   } catch {
     return NextResponse.json({ success: false, error: 'Something went wrong.' }, { status: 500 })
