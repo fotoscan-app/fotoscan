@@ -10,6 +10,7 @@ import {
 
 // ── Slider ────────────────────────────────────────────────────────────────────
 const SLIDES = [
+  { src: '/slider/banner-01.jpeg', tag: 'Your Best Moments, Perfectly Framed.' },
   { src: '/slider/pic1.png', tag: 'Every Moment, Instantly Shared.' },
   { src: '/slider/pic2.png', tag: 'Where Memories Meet Instantly.' },
   { src: '/slider/pic3.png', tag: 'Smart Sharing for Smart Events.' },
