@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { PlusIcon, PhotoIcon, UserGroupIcon, CalendarDaysIcon, BoltIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PhotoIcon, UserGroupIcon, CalendarDaysIcon, BoltIcon, CreditCardIcon } from '@heroicons/react/24/outline'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { formatBytes } from '@/lib/utils'
 
@@ -51,9 +51,14 @@ export default function DashboardPage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <Link href="/dashboard/events/new" className="btn-primary flex items-center gap-2">
-          <PlusIcon className="w-4 h-4" /> New event
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/billing" className="btn-secondary flex items-center gap-2">
+            <CreditCardIcon className="w-4 h-4" /> {user?.plan === 'business' ? 'Manage plan' : 'Upgrade plan'}
+          </Link>
+          <Link href="/dashboard/events/new" className="btn-primary flex items-center gap-2">
+            <PlusIcon className="w-4 h-4" /> New event
+          </Link>
+        </div>
       </div>
 
       {/* Stat cards */}
