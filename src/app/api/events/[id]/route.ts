@@ -20,7 +20,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const event = await db.event.findFirst({
     where: { id, organizerId: payload.userId },
     include: {
-      photos: { orderBy: { uploadedAt: 'desc' } },
       folders: { orderBy: { createdAt: 'asc' }, include: { _count: { select: { photos: true } } } },
       _count: { select: { guestSessions: true } },
     },
