@@ -53,7 +53,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <div className="flex items-center gap-2">
           <Link href="/dashboard/billing" className="btn-secondary flex items-center gap-2">
-            <CreditCardIcon className="w-4 h-4" /> {user?.plan === 'business' ? 'Manage plan' : 'Upgrade plan'}
+            <CreditCardIcon className="w-4 h-4" /> {user?.plan === 'business' ? 'Manage Plan' : 'Upgrade Your Plan'}
           </Link>
           <Link href="/dashboard/events/new" className="btn-primary flex items-center gap-2">
             <PlusIcon className="w-4 h-4" /> New event
