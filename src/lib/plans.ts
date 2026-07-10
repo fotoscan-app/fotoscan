@@ -28,8 +28,6 @@ export const EVENT_PACKS: EventPack[] = [
   { id: 'pack_40', name: 'Studio Pack',  events: 40, storageGB: 80, priceINR: 9999, pricePerEvent: 250 },
 ]
 
-export const TOPUP_PACK = { events: 5, priceINR: 999 }
-
 export interface Plan {
   id: string
   name: string
@@ -71,27 +69,26 @@ export const PLANS: Plan[] = [
     id: 'pro',
     name: 'Pro',
     razorpayPlanId: process.env.RAZORPAY_PRO_PLAN_ID ?? null,
-    priceINR: 1999,
+    priceINR: 1099,
     storageLimit: 50 * 1024 ** 3,       // 50 GB
-    eventLimit: 15,
+    eventLimit: 10,
     scanLimit: 5000,
     trialDays: 15,
     trialStorageGB: 2,
     highlighted: true,
     features: [
-      '15 events / month',
+      '10 events / month',
       '50 GB storage',
       '5,000 face scans / month',
       'Custom branding',
       'Priority support',
-      `Top-up: 5 extra events for ₹${TOPUP_PACK.priceINR}`,
     ],
   },
   {
     id: 'studio',
     name: 'Studio',
     razorpayPlanId: process.env.RAZORPAY_STUDIO_PLAN_ID ?? null,
-    priceINR: 4499,
+    priceINR: 1699,
     storageLimit: 100 * 1024 ** 3,      // 100 GB
     eventLimit: 40,
     scanLimit: 20000,
@@ -101,14 +98,13 @@ export const PLANS: Plan[] = [
       '20,000 face scans / month',
       'Custom branding',
       'Priority support',
-      `Top-up: 5 extra events for ₹${TOPUP_PACK.priceINR}`,
     ],
   },
   {
     id: 'business',
     name: 'Business',
     razorpayPlanId: process.env.RAZORPAY_BUSINESS_PLAN_ID ?? null,
-    priceINR: 7999,
+    priceINR: 3199,
     storageLimit: 200 * 1024 ** 3,      // 200 GB
     eventLimit: -1,
     scanLimit: -1,

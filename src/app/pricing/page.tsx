@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { BoltIcon, CubeIcon } from '@heroicons/react/24/outline'
-import { PLANS, EVENT_PACKS, BILLING_CYCLES, TOPUP_PACK, getPlanPrice } from '@/lib/plans'
+import { PLANS, EVENT_PACKS, BILLING_CYCLES, getPlanPrice } from '@/lib/plans'
 import type { BillingCycle } from '@/lib/plans'
 
 export default function PricingPage() {
@@ -221,10 +221,6 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-
-          <p className="text-center text-sm text-gray-400 mt-8">
-            Already on Pro? Add {TOPUP_PACK.events} more events anytime for ₹{TOPUP_PACK.priceINR.toLocaleString('en-IN')} — no plan change needed.
-          </p>
         </div>
 
         <p className="text-center text-sm text-gray-400">
