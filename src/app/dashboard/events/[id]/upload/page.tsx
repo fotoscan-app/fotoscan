@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useDropzone } from 'react-dropzone'
 import { ArrowLeftIcon, CheckCircleIcon, ExclamationCircleIcon, CloudArrowUpIcon, FolderIcon, PlusIcon } from '@heroicons/react/24/outline'
-import imageCompression from 'browser-image-compression'
 import { formatBytes } from '@/lib/utils'
 
 interface UploadFile {
@@ -72,14 +71,6 @@ export default function UploadPage() {
     updateFile(item.id, { status: 'uploading' })
 
     try {
-      // Client-side compression before upload
-      let fileToUpload = item.file
-      try {
-        fileToUpload = await imageCompression(item.file, {
-          maxSizeMB: 8, maxWidthOrHeight: 3840, useWebWorker: true,
-        })
-      } catch { /* use original if compression fails */ }
-
       // Step 1: Get presigned URL from our API
       let presignData: any
       try {
@@ -88,7 +79,7 @@ export default function UploadPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             eventId, fileName: item.name,
-            fileSize: fileToUpload.size, contentType: fileToUpload.type,
+            fileSize: item.file.size, contentType: item.file.type,
           }),
         })
         presignData = await presignRes.json()
@@ -105,8 +96,8 @@ export default function UploadPage() {
       // Step 2: Upload directly to S3 using presigned URL
       try {
         const s3Res = await fetch(presignData.data.uploadUrl, {
-          method: 'PUT', body: fileToUpload,
-          headers: { 'Content-Type': fileToUpload.type },
+          method: 'PUT', body: item.file,
+          headers: { 'Content-Type': item.file.type },
         })
         if (!s3Res.ok) {
           return updateFile(item.id, { status: 'error', error: `Step 2 failed: S3 returned ${s3Res.status}. Check S3 CORS settings.` })
@@ -123,7 +114,7 @@ export default function UploadPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             eventId, s3Key: presignData.data.s3Key,
-            fileName: item.name, fileSize: fileToUpload.size,
+            fileName: item.name, fileSize: item.file.size,
             folderId: folderId || undefined,
           }),
         })
