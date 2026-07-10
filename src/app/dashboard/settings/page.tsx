@@ -4,6 +4,12 @@ import { PaintBrushIcon, UserCircleIcon } from '@heroicons/react/24/outline'
 
 const sections = [
   {
+    href: '/dashboard/settings/profile',
+    icon: UserCircleIcon,
+    title: 'Profile',
+    desc: 'Update your name.',
+  },
+  {
     href: '/dashboard/settings/branding',
     icon: PaintBrushIcon,
     title: 'Branding',
