@@ -23,9 +23,9 @@ export interface EventPack {
 }
 
 export const EVENT_PACKS: EventPack[] = [
-  { id: 'pack_5',  name: 'Starter Pack', events: 5,  storageGB: 10, priceINR: 1999, pricePerEvent: 400 },
-  { id: 'pack_15', name: 'Growth Pack',  events: 15, storageGB: 30, priceINR: 4499, pricePerEvent: 300, highlighted: true },
-  { id: 'pack_40', name: 'Studio Pack',  events: 40, storageGB: 80, priceINR: 9999, pricePerEvent: 250 },
+  { id: 'pack_5',  name: 'Starter Pack', events: 5,  storageGB: 25,  priceINR: 1999, pricePerEvent: 400 },
+  { id: 'pack_15', name: 'Growth Pack',  events: 15, storageGB: 50,  priceINR: 4499, pricePerEvent: 300, highlighted: true },
+  { id: 'pack_40', name: 'Studio Pack',  events: 40, storageGB: 200, priceINR: 9999, pricePerEvent: 250 },
 ]
 
 export interface Plan {
@@ -73,8 +73,6 @@ export const PLANS: Plan[] = [
     storageLimit: 50 * 1024 ** 3,       // 50 GB
     eventLimit: 10,
     scanLimit: 5000,
-    trialDays: 15,
-    trialStorageGB: 2,
     highlighted: true,
     features: [
       '10 events / month',
