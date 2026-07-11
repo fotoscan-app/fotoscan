@@ -13,10 +13,6 @@ const SLIDES = [
   { src: '/slider/banner-01.jpeg', tag: 'Your Best Moments, Perfectly Framed.' },
   { src: '/slider/banner-02.png', tag: 'Capture the Magic of Every Event.' },
   { src: '/slider/banner-03.png', tag: 'Effortless Sharing, Unforgettable Memories.' },
-  { src: '/slider/pic1.png', tag: 'Every Moment, Instantly Shared.' },
-  { src: '/slider/pic2.png', tag: 'Where Memories Meet Instantly.' },
-  { src: '/slider/pic3.png', tag: 'Smart Sharing for Smart Events.' },
-  { src: '/slider/pic4.png', tag: 'No App. Just Scan.' },
 ]
 
 function HeroSlider() {
@@ -336,8 +332,8 @@ export default function LandingPage() {
       <footer className="bg-gray-900 text-gray-400 py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <Image src="/logo.jpeg" alt="QuickPik" width={120} height={40} className="object-contain brightness-0 invert" />
-            <p className="text-xs mt-1 text-gray-400">by Anss Studio Pvt. Ltd.</p>
+            <Image src="/anss-studio-logo.png" alt="Anss Studio" width={120} height={40} className="object-contain bg-white rounded p-1" />
+            <p className="text-xs mt-1 text-gray-400">By Anss Studio Pvt. Ltd.</p>
           </div>
           <div className="flex gap-6 text-sm">
             <a href="#features"     className="hover:text-white transition-colors">Features</a>
