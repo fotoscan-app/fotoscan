@@ -5,12 +5,14 @@ import Image from 'next/image'
 import {
   QrCodeIcon, FaceSmileIcon, ArrowDownTrayIcon, ShieldCheckIcon,
   BoltIcon, PhotoIcon, DevicePhoneMobileIcon, SparklesIcon,
-  ChevronLeftIcon, ChevronRightIcon, MapPinIcon, PhoneIcon, EnvelopeIcon,
+  ChevronLeftIcon, ChevronRightIcon, PhoneIcon, EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Slider ────────────────────────────────────────────────────────────────────
 const SLIDES = [
   { src: '/slider/banner-01.jpeg', tag: 'Your Best Moments, Perfectly Framed.' },
+  { src: '/slider/banner-02.png', tag: 'Capture the Magic of Every Event.' },
+  { src: '/slider/banner-03.png', tag: 'Effortless Sharing, Unforgettable Memories.' },
   { src: '/slider/pic1.png', tag: 'Every Moment, Instantly Shared.' },
   { src: '/slider/pic2.png', tag: 'Where Memories Meet Instantly.' },
   { src: '/slider/pic3.png', tag: 'Smart Sharing for Smart Events.' },
@@ -275,8 +277,8 @@ export default function LandingPage() {
               <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wide">Details</h3>
               <div className="space-y-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center shrink-0">
-                    <MapPinIcon className="w-5 h-5 text-brand-600" />
+                  <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                    <Image src="/anss-studio-logo.png" alt="Anss Studio" width={40} height={40} className="object-contain p-1" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">Anss Studio Pvt. Ltd.</p>
