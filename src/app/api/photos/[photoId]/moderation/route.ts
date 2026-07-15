@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
-import { deleteObject } from '@/lib/aws-s3'
-import { deleteFaces } from '@/lib/aws-rekognition'
+import { deletePhoto } from '@/lib/photo-delete'
 import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
 
@@ -42,24 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ phot
   }
 
   // action === 'remove': delete photo entirely
-  const deleteOps: Promise<unknown>[] = [deleteObject(photo.s3Key)]
-  if (photo.thumbnailKey) deleteOps.push(deleteObject(photo.thumbnailKey))
-  await Promise.allSettled(deleteOps)
-
-  if (photo.faceIds.length > 0) {
-    await deleteFaces(photo.event.rekognitionCollectionId, photo.faceIds)
-  }
-
-  const freed = BigInt(photo.fileSize)
-  await db.$transaction([
-    db.moderationFlag.delete({ where: { photoId } }),
-    db.photo.delete({ where: { id: photoId } }),
-    db.event.update({
-      where: { id: photo.eventId },
-      data: { pendingReviewCount: { decrement: 1 }, photoCount: { decrement: 1 } },
-    }),
-    db.user.update({ where: { id: payload.userId }, data: { storageUsed: { decrement: freed } } }),
-  ])
+  await deletePhoto(photo, payload.userId)
 
   logger.info('MODERATION', 'Photo removed', { userId: payload.userId, photoId })
   return NextResponse.json({ success: true, data: { action: 'removed' } })

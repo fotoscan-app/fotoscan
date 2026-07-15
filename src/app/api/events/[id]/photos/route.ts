@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
+import { cdnUrl } from '@/lib/aws-s3'
 import { ErrorCodes } from '@/lib/error-codes'
 
 const PAGE_SIZE = 48
@@ -28,15 +29,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     folder === 'uncategorized' ? { eventId: id, folderId: null } :
     { eventId: id, folderId: folder }
 
-  const [total, photos] = await Promise.all([
+  const [total, rows] = await Promise.all([
     db.photo.count({ where }),
     db.photo.findMany({
       where,
       orderBy: { uploadedAt: 'desc' },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
+      select: {
+        id: true, fileName: true, fileSize: true, s3Url: true, thumbnailKey: true,
+        isFlagged: true, folderId: true,
+      },
     }),
   ])
+
+  // The grid renders thumbnails only — the ~800px generated thumbnail, not the
+  // full-resolution original — so it stays fast even with hundreds of photos.
+  const photos = rows.map(({ thumbnailKey, ...p }) => ({
+    ...p, thumbnailUrl: thumbnailKey ? cdnUrl(thumbnailKey) : p.s3Url,
+  }))
 
   return NextResponse.json({
     success: true,

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback, memo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -12,9 +12,8 @@ import ModerationQueue from '@/components/ModerationQueue'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
 
 interface Photo {
-  id: string; fileName: string; fileSize: number; s3Url: string
-  thumbnailKey: string | null; faceCount: number; isFlagged: boolean; uploadedAt: string
-  folderId: string | null
+  id: string; fileName: string; fileSize: number; thumbnailUrl: string
+  isFlagged: boolean; folderId: string | null
 }
 
 interface Folder {
@@ -29,11 +28,34 @@ interface GuestEntry {
 interface Event {
   id: string; name: string; description: string | null; eventDate: string | null
   venue: string | null; status: string; photoCount: number; pendingReviewCount: number
-  allowGuestDownload: boolean; eventCode: string; createdAt: string
+  allowGuestDownload: boolean; eventCode: string; eventType: string; createdAt: string
   folders: Folder[]; _count: { guestSessions: number }
 }
 
 type Tab = 'photos' | 'guests'
+
+// Memoized so deleting one photo (which only removes that item from the array,
+// leaving every other photo object at the same reference) doesn't re-render
+// the rest of a large grid.
+const PhotoTile = memo(function PhotoTile({ photo, onDelete }: { photo: Photo; onDelete: (p: Photo) => void }) {
+  return (
+    <div className={`group relative aspect-square rounded-lg overflow-hidden bg-gray-100 ${photo.isFlagged ? 'ring-2 ring-accent-400' : ''}`}>
+      <img src={photo.thumbnailUrl} alt={photo.fileName} className="w-full h-full object-cover" loading="lazy" />
+      {photo.isFlagged && (
+        <div className="absolute top-1 left-1 bg-accent-500 rounded-full p-0.5">
+          <ExclamationTriangleIcon className="w-3 h-3 text-white" />
+        </div>
+      )}
+      <button onClick={() => onDelete(photo)} title="Delete photo"
+        className="absolute top-1 right-1 bg-black/60 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <TrashIcon className="w-3.5 h-3.5" />
+      </button>
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
+        <p className="text-white text-xs truncate">{formatBytes(photo.fileSize)}</p>
+      </div>
+    </div>
+  )
+})
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -54,8 +76,12 @@ export default function EventDetailPage() {
 
   const [photos, setPhotos]             = useState<Photo[]>([])
   const [photosPage, setPhotosPage]     = useState(1)
-  const [photosTotalPages, setPhotosTotalPages] = useState(1)
-  const [photosLoading, setPhotosLoading] = useState(true)
+  const [photosHasMore, setPhotosHasMore] = useState(true)
+  const [photosLoading, setPhotosLoading]         = useState(true)
+  const [photosLoadingMore, setPhotosLoadingMore] = useState(false)
+  const photosStateRef = useRef({ photosHasMore, photosLoading, photosLoadingMore, photosPage })
+  photosStateRef.current = { photosHasMore, photosLoading, photosLoadingMore, photosPage }
+  const observerRef = useRef<IntersectionObserver | null>(null)
 
   useEffect(() => {
     fetch(`/api/events/${id}`)
@@ -73,19 +99,60 @@ export default function EventDetailPage() {
       .finally(() => setGuestsLoading(false))
   }, [tab, id])
 
+  const fetchPhotosPage = useCallback(async (pageNum: number, append: boolean) => {
+    if (append) setPhotosLoadingMore(true); else setPhotosLoading(true)
+    try {
+      const res = await fetch(`/api/events/${id}/photos?folder=${encodeURIComponent(selectedFolder)}&page=${pageNum}`)
+      const d = await res.json()
+      if (d.success) {
+        setPhotos(prev => append ? [...prev, ...d.data.photos] : d.data.photos)
+        setPhotosHasMore(d.data.page < d.data.totalPages)
+        setPhotosPage(d.data.page)
+      }
+    } finally {
+      if (append) setPhotosLoadingMore(false); else setPhotosLoading(false)
+    }
+  }, [id, selectedFolder])
+
+  // Reset to page 1 whenever the folder (or tab) changes
   useEffect(() => {
     if (tab !== 'photos') return
-    setPhotosLoading(true)
-    fetch(`/api/events/${id}/photos?folder=${encodeURIComponent(selectedFolder)}&page=${photosPage}`)
-      .then(r => r.json())
-      .then(d => { if (d.success) { setPhotos(d.data.photos); setPhotosTotalPages(d.data.totalPages) } })
-      .finally(() => setPhotosLoading(false))
-  }, [tab, id, selectedFolder, photosPage])
+    fetchPhotosPage(1, false)
+  }, [tab, fetchPhotosPage])
+
+  // Infinite scroll: fires the instant the sentinel div mounts (a callback ref,
+  // unlike useRef+useEffect, never races the DOM commit), and reads state from
+  // a ref so the observer doesn't need to be torn down/recreated on every update.
+  const sentinelCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    observerRef.current?.disconnect()
+    if (!el) return
+    observerRef.current = new IntersectionObserver(entries => {
+      const s = photosStateRef.current
+      if (entries[0].isIntersecting && s.photosHasMore && !s.photosLoading && !s.photosLoadingMore) {
+        fetchPhotosPage(s.photosPage + 1, true)
+      }
+    }, { rootMargin: '600px' })
+    observerRef.current.observe(el)
+  }, [fetchPhotosPage])
 
   function selectFolder(f: string) {
     setSelectedFolder(f)
-    setPhotosPage(1)
   }
+
+  const deletePhoto = useCallback(async (photo: Photo) => {
+    if (!confirm('Delete this photo? This cannot be undone.')) return
+    const res = await fetch(`/api/photos/${photo.id}`, { method: 'DELETE' })
+    const d = await res.json()
+    if (!d.success) { alert(d.error || 'Delete failed. Please try again.'); return }
+    setPhotos(prev => prev.filter(p => p.id !== photo.id))
+    setEvent(prev => prev && {
+      ...prev,
+      photoCount: prev.photoCount - 1,
+      folders: photo.folderId
+        ? prev.folders.map(f => f.id === photo.folderId ? { ...f, _count: { photos: f._count.photos - 1 } } : f)
+        : prev.folders,
+    })
+  }, [])
 
   async function toggleStatus() {
     if (!event) return
@@ -151,6 +218,12 @@ export default function EventDetailPage() {
   if (loading) return <div className="p-8 text-gray-400">Loading…</div>
   if (!event)  return <div className="p-8 text-red-500">Event not found.</div>
 
+  // Carry the currently selected folder into the upload page so photos land
+  // where the customer is actually looking, instead of always defaulting to
+  // uncategorized. 'all' and 'uncategorized' aren't real folder ids.
+  const isRealFolder = selectedFolder !== 'all' && selectedFolder !== 'uncategorized'
+  const uploadHref = `/dashboard/events/${id}/upload${isRealFolder ? `?folder=${selectedFolder}` : ''}`
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <Link href="/dashboard" className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6">
@@ -173,7 +246,7 @@ export default function EventDetailPage() {
           <button onClick={() => setShowQR(true)} className="btn-secondary flex items-center gap-2 text-sm">
             <QrCodeIcon className="w-4 h-4" /> QR Code
           </button>
-          <Link href={`/dashboard/events/${id}/upload`} className="btn-primary flex items-center gap-2 text-sm">
+          <Link href={uploadHref} className="btn-primary flex items-center gap-2 text-sm">
             <ArrowUpTrayIcon className="w-4 h-4" /> Upload photos
           </Link>
           {event.pendingReviewCount > 0 && (
@@ -282,7 +355,7 @@ export default function EventDetailPage() {
                   {event.photoCount === 0 ? 'No photos yet' : 'No photos in this folder'}
                 </h3>
                 <p className="text-gray-500 mb-6">Upload photos so guests can find themselves.</p>
-                <Link href={`/dashboard/events/${id}/upload`} className="btn-primary inline-flex items-center gap-2">
+                <Link href={uploadHref} className="btn-primary inline-flex items-center gap-2">
                   <ArrowUpTrayIcon className="w-4 h-4" /> Upload photos
                 </Link>
               </div>
@@ -290,33 +363,17 @@ export default function EventDetailPage() {
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {photos.map(p => (
-                    <div key={p.id} className={`relative aspect-square rounded-lg overflow-hidden bg-gray-100 ${p.isFlagged ? 'ring-2 ring-accent-400' : ''}`}>
-                      <img src={p.s3Url} alt={p.fileName} className="w-full h-full object-cover" loading="lazy" />
-                      {p.isFlagged && (
-                        <div className="absolute top-1 right-1 bg-accent-500 rounded-full p-0.5">
-                          <ExclamationTriangleIcon className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
-                        <p className="text-white text-xs truncate">{formatBytes(p.fileSize)}</p>
-                      </div>
-                    </div>
+                    <PhotoTile key={p.id} photo={p} onDelete={deletePhoto} />
                   ))}
                 </div>
 
-                {/* Pagination */}
-                {photosTotalPages > 1 && (
-                  <div className="flex items-center justify-center gap-4 mt-6">
-                    <button onClick={() => setPhotosPage(p => Math.max(1, p - 1))} disabled={photosPage === 1}
-                      className="btn-secondary text-sm disabled:opacity-40 disabled:cursor-not-allowed">
-                      Previous
-                    </button>
-                    <span className="text-sm text-gray-500">Page {photosPage} of {photosTotalPages}</span>
-                    <button onClick={() => setPhotosPage(p => Math.min(photosTotalPages, p + 1))} disabled={photosPage === photosTotalPages}
-                      className="btn-secondary text-sm disabled:opacity-40 disabled:cursor-not-allowed">
-                      Next
-                    </button>
-                  </div>
+                {/* Infinite scroll sentinel */}
+                <div ref={sentinelCallbackRef} className="h-1" />
+                {photosLoadingMore && (
+                  <div className="text-gray-400 text-sm text-center py-6">Loading more…</div>
+                )}
+                {!photosHasMore && photos.length > 0 && (
+                  <p className="text-gray-300 text-xs text-center py-6">All {photos.length} photos loaded</p>
                 )}
               </>
             )}
@@ -420,6 +477,7 @@ export default function EventDetailPage() {
           eventName={event.name}
           eventDate={event.eventDate}
           venue={event.venue}
+          eventType={event.eventType}
           onClose={() => setShowQR(false)}
         />
       )}

@@ -9,7 +9,7 @@ import {
   generateThumbnail,
   stripExifAndGetMeta,
   computePHash,
-  hammingDistance,
+  isDuplicate,
 } from '@/lib/upload-validator'
 import {
   indexFaces,
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   if (pHash) {
     const existing = await db.photo.findMany({ where: { eventId }, select: { pHash: true, fileName: true } })
     for (const p of existing) {
-      if (p.pHash && hammingDistance(pHash, p.pHash) <= 5) {
+      if (p.pHash && isDuplicate(pHash, p.pHash)) {
         logger.warn('UPLOAD', 'Duplicate photo detected', { userId: payload.userId, eventId, fileName })
         return NextResponse.json({ success: false, error: ErrorCodes.DUPLICATE_PHOTO.message, code: ErrorCodes.DUPLICATE_PHOTO.code }, { status: 409 })
       }

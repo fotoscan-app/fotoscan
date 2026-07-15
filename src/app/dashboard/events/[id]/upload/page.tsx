@@ -1,6 +1,6 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useState, useCallback, useEffect, memo } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useDropzone } from 'react-dropzone'
 import { ArrowLeftIcon, CheckCircleIcon, ExclamationCircleIcon, CloudArrowUpIcon, FolderIcon, PlusIcon } from '@heroicons/react/24/outline'
@@ -14,13 +14,52 @@ interface UploadFile {
 
 interface FolderOption { id: string; name: string }
 
+// Memoized: updating one file's status (happens ~2x per file across a batch
+// upload) must not re-render every other row. updateFile() only replaces the
+// one changed object in the array, so unaffected rows keep the same object
+// reference and this memo correctly skips them — without it, a 500-photo
+// upload forces an O(n^2) reconciliation and the page (incl. scrolling)
+// grinds to a halt while uploads are in flight.
+const FileRow = memo(function FileRow({ file }: { file: UploadFile }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
+        <p className="text-xs text-gray-400">{formatBytes(file.size)}</p>
+      </div>
+      <div className="shrink-0">
+        {file.status === 'queued' && <span className="text-xs text-gray-400">Queued</span>}
+        {file.status === 'uploading' && (
+          <span className="text-xs text-brand-500 flex items-center gap-1">
+            <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" /> Uploading…
+          </span>
+        )}
+        {file.status === 'done' && <CheckCircleIcon className="w-5 h-5 text-green-500" />}
+        {file.status === 'flagged' && (
+          <span className="text-xs text-accent-600 flex items-center gap-1">
+            <ExclamationCircleIcon className="w-4 h-4" /> Pending review
+          </span>
+        )}
+        {file.status === 'duplicate' && <span className="text-xs text-gray-400">Duplicate</span>}
+        {file.status === 'error' && (
+          <span className="text-xs text-red-500 max-w-[160px] text-right">{file.error}</span>
+        )}
+      </div>
+    </div>
+  )
+})
+
 export default function UploadPage() {
   const { id: eventId } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [uploading, setUploading] = useState(false)
 
   const [folders, setFolders]           = useState<FolderOption[]>([])
-  const [folderId, setFolderId]         = useState<string>('') // '' = no folder
+  // Pre-select the folder the customer was viewing on the event page (passed
+  // via ?folder=), so "Upload photos" from inside a folder actually uploads
+  // there instead of silently defaulting back to uncategorized.
+  const [folderId, setFolderId]         = useState<string>(() => searchParams.get('folder') || '')
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName]   = useState('')
   const [folderError, setFolderError]       = useState('')
@@ -224,32 +263,7 @@ export default function UploadPage() {
 
           {/* File list */}
           <div className="card divide-y divide-gray-100 mb-6 max-h-80 overflow-auto">
-            {files.map(f => (
-              <div key={f.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{f.name}</p>
-                  <p className="text-xs text-gray-400">{formatBytes(f.size)}</p>
-                </div>
-                <div className="shrink-0">
-                  {f.status === 'queued' && <span className="text-xs text-gray-400">Queued</span>}
-                  {f.status === 'uploading' && (
-                    <span className="text-xs text-brand-500 flex items-center gap-1">
-                      <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" /> Uploading…
-                    </span>
-                  )}
-                  {f.status === 'done' && <CheckCircleIcon className="w-5 h-5 text-green-500" />}
-                  {f.status === 'flagged' && (
-                    <span className="text-xs text-accent-600 flex items-center gap-1">
-                      <ExclamationCircleIcon className="w-4 h-4" /> Pending review
-                    </span>
-                  )}
-                  {f.status === 'duplicate' && <span className="text-xs text-gray-400">Duplicate</span>}
-                  {f.status === 'error' && (
-                    <span className="text-xs text-red-500 max-w-[160px] text-right">{f.error}</span>
-                  )}
-                </div>
-              </div>
-            ))}
+            {files.map(f => <FileRow key={f.id} file={f} />)}
           </div>
 
           {queued > 0 && (

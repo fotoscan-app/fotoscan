@@ -53,12 +53,26 @@ export async function stripExifAndGetMeta(
   return { buffer, width: meta.width || 0, height: meta.height || 0 }
 }
 
+// Difference hash (dHash): each bit compares a pixel to its right-hand neighbor
+// rather than to the image's global average. An average hash (the previous
+// implementation) only captures rough overall brightness, so many genuinely
+// different photos from the same event (same venue/lighting) land within a
+// few bits of each other purely by chance and get falsely flagged as
+// duplicates. Comparing local gradients instead captures actual structure,
+// which is what makes dHash meaningfully more discriminating.
 export async function computePHash(buffer: Buffer): Promise<string> {
   try {
-    // Resize to 8x8 grayscale and compute a simple perceptual hash
-    const small = await sharp(buffer).resize(8, 8).greyscale().raw().toBuffer()
-    const avg = small.reduce((a, b) => a + b, 0) / small.length
-    return small.reduce((hash, pixel, i) => hash + (pixel >= avg ? '1' : '0'), '')
+    // 9x8 so each of the 8 columns has a right-hand neighbor to compare against
+    const { data, info } = await sharp(buffer).resize(9, 8).greyscale().raw().toBuffer({ resolveWithObject: true })
+    let hash = ''
+    for (let y = 0; y < info.height; y++) {
+      for (let x = 0; x < info.width - 1; x++) {
+        const left = data[y * info.width + x]
+        const right = data[y * info.width + x + 1]
+        hash += left > right ? '1' : '0'
+      }
+    }
+    return hash
   } catch { return '' }
 }
 
@@ -67,7 +81,10 @@ export function hammingDistance(a: string, b: string): number {
   return a.split('').filter((c, i) => c !== b[i]).length
 }
 
-// Two photos are duplicates if hamming distance <= 5 (out of 64 bits)
+// Two photos are duplicates if hamming distance <= 3 (out of 64 bits). Kept
+// conservative on purpose: a false positive here silently blocks a real photo
+// from being uploaded, while a missed true duplicate just costs a bit of
+// storage — so the threshold errs toward under-flagging, not over-flagging.
 export function isDuplicate(newHash: string, existingHash: string): boolean {
-  return hammingDistance(newHash, existingHash) <= 5
+  return hammingDistance(newHash, existingHash) <= 3
 }
