@@ -2,16 +2,18 @@
 import { useEffect, useState } from 'react'
 import { XMarkIcon, ArrowDownTrayIcon, ClipboardIcon, CheckIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils'
+import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS } from '@/lib/event-types'
 
 interface Props {
   eventId: string
   eventName: string
   eventDate?: string | null
   venue?: string | null
+  eventType?: string
   onClose: () => void
 }
 
-export default function QRCodeDisplay({ eventId, eventName, eventDate, venue, onClose }: Props) {
+export default function QRCodeDisplay({ eventId, eventName, eventDate, venue, eventType, onClose }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [guestUrl, setGuestUrl] = useState('')
   const [copied, setCopied] = useState(false)
@@ -52,7 +54,14 @@ export default function QRCodeDisplay({ eventId, eventName, eventDate, venue, on
 
         {/* Event details */}
         <div className="bg-brand-50 rounded-xl px-4 py-3 mb-4">
-          <p className="font-semibold text-brand-900 text-base leading-snug">{eventName}</p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold text-brand-900 text-base leading-snug">{eventName}</p>
+            {eventType && (
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium shrink-0 ${EVENT_TYPE_COLORS[eventType] ?? EVENT_TYPE_COLORS.custom}`}>
+                {EVENT_TYPE_LABELS[eventType] ?? 'Custom'}
+              </span>
+            )}
+          </div>
           {eventDate && (
             <p className="flex items-center gap-1.5 text-sm text-brand-700 mt-1">
               <CalendarIcon className="w-3.5 h-3.5 shrink-0" />{formatDate(eventDate)}

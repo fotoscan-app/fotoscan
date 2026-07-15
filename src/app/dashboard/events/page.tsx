@@ -3,25 +3,13 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { PlusIcon, PhotoIcon, UserGroupIcon, ExclamationTriangleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils'
+import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS } from '@/lib/event-types'
 
 interface Event {
   id: string; name: string; eventDate: string | null; venue: string | null
   status: string; photoCount: number; pendingReviewCount: number
   allowGuestDownload: boolean; eventType: string; thumbnailUrl: string | null
   _count: { guestSessions: number }; createdAt: string
-}
-
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  wedding: 'Wedding', corporate: 'Corporate', sports: 'Sports',
-  school: 'School', custom: 'Custom',
-}
-
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  wedding:   'bg-pink-100 text-pink-700',
-  corporate: 'bg-blue-100 text-blue-700',
-  sports:    'bg-orange-100 text-orange-700',
-  school:    'bg-purple-100 text-purple-700',
-  custom:    'bg-gray-100 text-gray-600',
 }
 
 export default function EventsPage() {
