@@ -14,6 +14,13 @@ model User {
   name                 String
   businessName         String?
   logoKey              String?
+  avatarKey            String?
+  country              String?
+  state                String?
+  city                 String?
+  companyName          String?
+  industry             String?
+  gstNumber            String?
   plan                 String   @default("starter")
   storageUsed          BigInt   @default(0)
   storageLimit         BigInt   @default(10737418240)

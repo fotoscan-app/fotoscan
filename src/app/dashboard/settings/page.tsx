@@ -7,7 +7,7 @@ const sections = [
     href: '/dashboard/settings/profile',
     icon: UserCircleIcon,
     title: 'Profile',
-    desc: 'Update your name.',
+    desc: 'Your photo, personal, company, and billing details.',
   },
   {
     href: '/dashboard/settings/branding',
