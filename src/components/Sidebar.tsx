@@ -54,10 +54,11 @@ export default function Sidebar({ user }: { user: User }) {
 
       {/* User + logout */}
       <div className="px-3 py-4 border-t border-gray-100">
-        <div className="px-3 py-2 mb-1">
+        <Link href="/dashboard/settings/profile"
+          className="block px-3 py-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors">
           <p className="text-sm font-medium text-gray-900 truncate">{user.businessName || user.name}</p>
           <p className="text-xs text-gray-400 truncate">{user.name}</p>
-        </div>
+        </Link>
         <button onClick={logout}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 w-full transition-colors">
           <ArrowRightOnRectangleIcon className="w-5 h-5" />
