@@ -12,7 +12,11 @@ export async function GET(req: NextRequest) {
   since30.setDate(since30.getDate() - 29)
   since30.setHours(0, 0, 0, 0)
 
-  const [events, guestSessions] = await Promise.all([
+  const monthStart = new Date()
+  monthStart.setDate(1)
+  monthStart.setHours(0, 0, 0, 0)
+
+  const [events, guestSessions, eventsThisMonth, scansThisMonth] = await Promise.all([
     db.event.findMany({
       where: { organizerId: payload.userId },
       select: { id: true, status: true, photoCount: true, createdAt: true, _count: { select: { guestSessions: true } } },
@@ -21,10 +25,13 @@ export async function GET(req: NextRequest) {
       where: { event: { organizerId: payload.userId }, createdAt: { gte: since30 } },
       select: { createdAt: true },
     }),
+    db.event.count({ where: { organizerId: payload.userId, createdAt: { gte: monthStart } } }),
+    db.guestSession.count({ where: { event: { organizerId: payload.userId }, createdAt: { gte: monthStart } } }),
   ])
 
   const totalEvents  = events.length
   const activeEvents = events.filter(e => e.status === 'active').length
+  const closedEvents = events.filter(e => e.status === 'closed').length
   const totalPhotos  = events.reduce((s, e) => s + e.photoCount, 0)
   const totalGuests  = events.reduce((s, e) => s + e._count.guestSessions, 0)
 
@@ -52,6 +59,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: { totalEvents, activeEvents, totalPhotos, totalGuests, daily: days },
+    data: { totalEvents, activeEvents, closedEvents, totalPhotos, totalGuests, eventsThisMonth, scansThisMonth, daily: days },
   })
 }

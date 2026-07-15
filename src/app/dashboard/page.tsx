@@ -3,13 +3,120 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { PlusIcon, PhotoIcon, UserGroupIcon, CalendarDaysIcon, BoltIcon, CreditCardIcon } from '@heroicons/react/24/outline'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { formatBytes } from '@/lib/utils'
+import { formatBytes, formatDate } from '@/lib/utils'
+import { getPlanById } from '@/lib/plans'
 
-interface UserData { storageUsed: number; storageLimit: number; plan: string }
+interface UserData { storageUsed: number; storageLimit: number; plan: string; subscriptionStatus: string }
 
 interface Stats {
-  totalEvents: number; activeEvents: number; totalPhotos: number; totalGuests: number
+  totalEvents: number; activeEvents: number; closedEvents: number; totalPhotos: number; totalGuests: number
+  eventsThisMonth: number; scansThisMonth: number
   daily: { date: string; guests: number; events: number }[]
+}
+
+interface RecentEvent {
+  id: string; name: string; status: string; photoCount: number; createdAt: string
+  _count: { guestSessions: number }
+}
+
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  active:         { label: 'Active',     color: 'text-green-700 bg-green-100' },
+  trialing:       { label: 'Trial',      color: 'text-blue-700 bg-blue-100' },
+  past_due:       { label: 'Past due',   color: 'text-red-700 bg-red-100' },
+  pending_cancel: { label: 'Cancelling', color: 'text-amber-700 bg-amber-100' },
+  canceled:       { label: 'Canceled',   color: 'text-gray-600 bg-gray-100' },
+}
+
+function UsageRow({ label, used, limit, format }: { label: string; used: number; limit: number; format?: (n: number) => string }) {
+  const unlimited = limit === -1
+  const percent = unlimited ? 0 : Math.min(100, (used / limit) * 100)
+  const fmt = format ?? ((n: number) => n.toLocaleString('en-IN'))
+  return (
+    <div>
+      <div className="flex items-center justify-between text-sm mb-1.5">
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className="text-gray-500">{unlimited ? 'Unlimited' : `${fmt(used)} / ${fmt(limit)}`}</span>
+      </div>
+      {!unlimited && (
+        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${percent > 90 ? 'bg-red-500' : percent > 70 ? 'bg-accent-500' : 'bg-brand-500'}`}
+            style={{ width: `${percent}%` }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EventStatusBar({ active, closed }: { active: number; closed: number }) {
+  const total = active + closed
+  const activePercent = total === 0 ? 0 : (active / total) * 100
+  const closedPercent = total === 0 ? 0 : (closed / total) * 100
+  return (
+    <div className="card p-5">
+      <h2 className="text-sm font-semibold text-gray-700 mb-4">Event status</h2>
+      {total === 0 ? (
+        <p className="text-sm text-gray-400">No events yet.</p>
+      ) : (
+        <>
+          <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden flex gap-0.5">
+            <div className="h-full bg-green-500 first:rounded-l-full last:rounded-r-full" style={{ width: `${activePercent}%` }} />
+            <div className="h-full bg-gray-400 first:rounded-l-full last:rounded-r-full" style={{ width: `${closedPercent}%` }} />
+          </div>
+          <div className="flex items-center gap-5 mt-3 text-sm">
+            <span className="flex items-center gap-1.5 text-gray-600">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" /> Active <span className="font-semibold text-gray-900">{active}</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-gray-600">
+              <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0" /> Closed <span className="font-semibold text-gray-900">{closed}</span>
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function RecentEventsTable({ events }: { events: RecentEvent[] }) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-gray-700">Recent events</h2>
+        <Link href="/dashboard/events" className="text-sm text-brand-600 hover:underline font-medium">View all</Link>
+      </div>
+      {events.length === 0 ? (
+        <p className="text-sm text-gray-400">No events yet.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500 border-b border-gray-100">
+              <th className="font-medium pb-2 pr-4">Event</th>
+              <th className="font-medium pb-2 pr-4">Status</th>
+              <th className="font-medium pb-2 pr-4 text-right">Photos</th>
+              <th className="font-medium pb-2 pr-4 text-right">Guests</th>
+              <th className="font-medium pb-2 text-right">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.slice(0, 5).map(ev => (
+              <tr key={ev.id} className="border-b border-gray-50 last:border-0">
+                <td className="py-2.5 pr-4">
+                  <Link href={`/dashboard/events/${ev.id}`} className="font-medium text-gray-900 hover:text-brand-600">{ev.name}</Link>
+                </td>
+                <td className="py-2.5 pr-4">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ev.status === 'active' ? 'text-green-700 bg-green-100' : 'text-gray-600 bg-gray-100'}`}>
+                    {ev.status}
+                  </span>
+                </td>
+                <td className="py-2.5 pr-4 text-right text-gray-600">{ev.photoCount}</td>
+                <td className="py-2.5 pr-4 text-right text-gray-600">{ev._count.guestSessions}</td>
+                <td className="py-2.5 text-right text-gray-500">{formatDate(ev.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
 }
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number | string; icon: React.ElementType; color: string }) {
@@ -27,28 +134,29 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 }
 
 export default function DashboardPage() {
-  const [user, setUser]   = useState<UserData | null>(null)
-  const [stats, setStats] = useState<Stats | null>(null)
+  const [user, setUser]     = useState<UserData | null>(null)
+  const [stats, setStats]   = useState<Stats | null>(null)
+  const [events, setEvents] = useState<RecentEvent[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/me').then(r => r.json()),
       fetch('/api/dashboard/stats').then(r => r.json()),
-    ]).then(([meData, stData]) => {
+      fetch('/api/events').then(r => r.json()),
+    ]).then(([meData, stData, evData]) => {
       if (meData.success) setUser(meData.data.user)
       if (stData.success) setStats(stData.data)
+      if (evData.success) setEvents(evData.data.events)
     }).finally(() => setLoading(false))
   }, [])
-
-  const storagePercent = user ? Math.min(100, (user.storageUsed / user.storageLimit) * 100) : 0
 
   if (loading) return <div className="p-8 text-gray-400">Loading…</div>
 
   const tickFormatter = (_: string, i: number) => (i % 5 === 0 ? _ : '')
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <div className="flex items-center gap-2">
@@ -108,20 +216,52 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Storage bar */}
-      {user && (
-        <div className="card p-5">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="font-medium text-gray-700">Storage used</span>
-            <span className="text-gray-500">{formatBytes(user.storageUsed)} / {formatBytes(user.storageLimit)}</span>
-          </div>
-          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${storagePercent > 90 ? 'bg-red-500' : storagePercent > 70 ? 'bg-accent-500' : 'bg-brand-500'}`}
-              style={{ width: `${storagePercent}%` }} />
-          </div>
-          <p className="text-xs text-gray-400 mt-1">{user.plan.toUpperCase()} plan</p>
+      {/* Recent events + status */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2">
+          <RecentEventsTable events={events} />
         </div>
-      )}
+        {stats && <EventStatusBar active={stats.activeEvents} closed={stats.closedEvents} />}
+      </div>
+
+      {/* Current plan */}
+      {user && (() => {
+        const plan = getPlanById(user.plan)
+        const statusInfo = STATUS_LABELS[user.subscriptionStatus] ?? STATUS_LABELS.active
+        const isTotalCap = plan.id === 'starter' // Starter's limits are lifetime totals, not monthly
+        return (
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-gray-900">{plan.name} plan</h2>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">
+                  {plan.priceINR === 0 ? 'Free' : <>₹{plan.priceINR.toLocaleString('en-IN')}<span className="text-gray-400">/mo</span></>}
+                </span>
+                <Link href="/dashboard/billing" className="text-sm text-brand-600 hover:underline font-medium">
+                  {plan.id === 'business' ? 'Manage plan' : 'Upgrade'}
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <UsageRow label="Storage" used={user.storageUsed} limit={user.storageLimit} format={formatBytes} />
+              <UsageRow
+                label={isTotalCap ? 'Events (total)' : 'Events this month'}
+                used={isTotalCap ? stats?.totalEvents ?? 0 : stats?.eventsThisMonth ?? 0}
+                limit={plan.eventLimit}
+              />
+              <UsageRow
+                label={isTotalCap ? 'Face scans (total)' : 'Face scans this month'}
+                used={isTotalCap ? stats?.totalGuests ?? 0 : stats?.scansThisMonth ?? 0}
+                limit={plan.scanLimit}
+              />
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

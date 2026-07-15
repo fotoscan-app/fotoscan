@@ -103,12 +103,12 @@ export const PLANS: Plan[] = [
     name: 'Business',
     razorpayPlanId: process.env.RAZORPAY_BUSINESS_PLAN_ID ?? null,
     priceINR: 3199,
-    storageLimit: 200 * 1024 ** 3,      // 200 GB
+    storageLimit: 500 * 1024 ** 3,      // 500 GB
     eventLimit: -1,
     scanLimit: -1,
     features: [
       'Unlimited events',
-      '200 GB storage',
+      '500 GB storage',
       'Unlimited face scans',
       'Custom branding',
       'Priority support',
