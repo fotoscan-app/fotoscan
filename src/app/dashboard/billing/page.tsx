@@ -262,7 +262,7 @@ export default function BillingPage() {
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
         {user.plan === 'business' ? 'Your plan' : 'Upgrade your plan'}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         {PLANS.map(plan => {
           const isCurrent = plan.id === user.plan
           const currentIdx = PLANS.findIndex(p => p.id === user.plan)

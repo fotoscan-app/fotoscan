@@ -7,9 +7,9 @@ export interface BillingCycle {
 
 export const BILLING_CYCLES: BillingCycle[] = [
   { id: 'monthly',    label: 'Monthly',     months: 1,  discountPct: 0  },
-  { id: 'quarterly',  label: 'Quarterly',   months: 3,  discountPct: 10 },
-  { id: 'halfyearly', label: 'Half-Yearly', months: 6,  discountPct: 15 },
-  { id: 'annual',     label: 'Annual',      months: 12, discountPct: 25 },
+  { id: 'quarterly',  label: 'Quarterly',   months: 3,  discountPct: 15 },
+  { id: 'halfyearly', label: 'Half-Yearly', months: 6,  discountPct: 25 },
+  { id: 'annual',     label: 'Annual',      months: 12, discountPct: 38 },
 ]
 
 export interface EventPack {
@@ -86,7 +86,7 @@ export const PLANS: Plan[] = [
     id: 'studio',
     name: 'Studio',
     razorpayPlanId: process.env.RAZORPAY_STUDIO_PLAN_ID ?? null,
-    priceINR: 1699,
+    priceINR: 1499,
     storageLimit: 100 * 1024 ** 3,      // 100 GB
     eventLimit: 40,
     scanLimit: 20000,
@@ -99,10 +99,26 @@ export const PLANS: Plan[] = [
     ],
   },
   {
+    id: 'elite',
+    name: 'Elite',
+    razorpayPlanId: process.env.RAZORPAY_ELITE_PLAN_ID ?? null,
+    priceINR: 2099,
+    storageLimit: 200 * 1024 ** 3,      // 200 GB
+    eventLimit: 65,
+    scanLimit: 20000,
+    features: [
+      '65 events / month',
+      '200 GB storage',
+      '20,000 face scans / month',
+      'Custom branding',
+      'Priority support',
+    ],
+  },
+  {
     id: 'business',
     name: 'Business',
     razorpayPlanId: process.env.RAZORPAY_BUSINESS_PLAN_ID ?? null,
-    priceINR: 3199,
+    priceINR: 3099,
     storageLimit: 500 * 1024 ** 3,      // 500 GB
     eventLimit: -1,
     scanLimit: -1,

@@ -38,7 +38,7 @@ export default function AdminOverviewPage() {
   if (loading) return <div className="text-gray-400 text-sm">Loading…</div>
   if (!stats)  return <div className="text-red-500 text-sm">Failed to load stats.</div>
 
-  const planOrder = ['starter', 'pro', 'studio', 'business']
+  const planOrder = ['starter', 'pro', 'studio', 'elite', 'business']
 
   return (
     <div className="space-y-8">
@@ -61,7 +61,7 @@ export default function AdminOverviewPage() {
       {/* Plan breakdown */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <h2 className="font-semibold text-gray-900 mb-4">Plan Breakdown</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {planOrder.map(plan => {
             const count = stats.plans[plan] ?? 0
             const total = stats.totalUsers || 1
@@ -70,6 +70,7 @@ export default function AdminOverviewPage() {
               starter:  'bg-gray-100 text-gray-600',
               pro:      'bg-brand-50 text-brand-700',
               studio:   'bg-amber-50 text-amber-700',
+              elite:    'bg-rose-50 text-rose-700',
               business: 'bg-purple-50 text-purple-700',
             }
             return (

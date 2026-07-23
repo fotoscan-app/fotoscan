@@ -6,7 +6,7 @@ import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
-const schema = z.object({ planId: z.enum(['pro', 'studio', 'business']) })
+const schema = z.object({ planId: z.enum(['pro', 'studio', 'elite', 'business']) })
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get(COOKIE)?.value

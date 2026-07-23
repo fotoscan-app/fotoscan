@@ -57,7 +57,7 @@ export default function PricingPage() {
         </div>
 
         {/* ── Subscription plan cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-24">
           {PLANS.map(plan => {
             const { monthly, total } = plan.priceINR > 0
               ? getPlanPrice(plan, cycle)

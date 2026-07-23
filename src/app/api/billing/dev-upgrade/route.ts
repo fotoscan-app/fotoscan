@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
 import { getPlanById } from '@/lib/plans'
 
-const schema = z.object({ planId: z.enum(['starter', 'pro', 'studio', 'business']) })
+const schema = z.object({ planId: z.enum(['starter', 'pro', 'studio', 'elite', 'business']) })
 
 export async function POST(req: NextRequest) {
   if (process.env.DEV_BILLING_BYPASS !== 'true') {
