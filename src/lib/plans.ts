@@ -31,7 +31,6 @@ export const EVENT_PACKS: EventPack[] = [
 export interface Plan {
   id: string
   name: string
-  razorpayPlanId: string | null
   priceINR: number
   storageLimit: number   // bytes
   eventLimit: number     // -1 = unlimited
@@ -52,7 +51,6 @@ export const PLANS: Plan[] = [
   {
     id: 'starter',
     name: 'Starter',
-    razorpayPlanId: null,
     priceINR: 0,
     storageLimit: 5 * 1024 ** 3,        // 5 GB
     eventLimit: 2,
@@ -68,7 +66,6 @@ export const PLANS: Plan[] = [
   {
     id: 'pro',
     name: 'Pro',
-    razorpayPlanId: process.env.RAZORPAY_PRO_PLAN_ID ?? null,
     priceINR: 1099,
     storageLimit: 50 * 1024 ** 3,       // 50 GB
     eventLimit: 10,
@@ -85,7 +82,6 @@ export const PLANS: Plan[] = [
   {
     id: 'studio',
     name: 'Studio',
-    razorpayPlanId: process.env.RAZORPAY_STUDIO_PLAN_ID ?? null,
     priceINR: 1499,
     storageLimit: 100 * 1024 ** 3,      // 100 GB
     eventLimit: 40,
@@ -101,7 +97,6 @@ export const PLANS: Plan[] = [
   {
     id: 'elite',
     name: 'Elite',
-    razorpayPlanId: process.env.RAZORPAY_ELITE_PLAN_ID ?? null,
     priceINR: 2099,
     storageLimit: 200 * 1024 ** 3,      // 200 GB
     eventLimit: 65,
@@ -117,7 +112,6 @@ export const PLANS: Plan[] = [
   {
     id: 'business',
     name: 'Business',
-    razorpayPlanId: process.env.RAZORPAY_BUSINESS_PLAN_ID ?? null,
     priceINR: 3099,
     storageLimit: 500 * 1024 ** 3,      // 500 GB
     eventLimit: -1,
@@ -137,6 +131,44 @@ export function getPlanById(id: string): Plan {
   return PLANS.find(p => p.id === id) ?? PLANS[0]
 }
 
+// Each paid plan needs a separate Razorpay Plan per billing cycle (Razorpay bills
+// off a fixed Plan amount+interval, so "Pro Quarterly" and "Pro Monthly" are
+// different Razorpay Plan objects even though they map to the same internal Plan).
+const RAZORPAY_PLAN_IDS: Record<string, Partial<Record<BillingCycle['id'], string>>> = {
+  pro: {
+    monthly:    process.env.RAZORPAY_PRO_PLAN_ID,
+    quarterly:  process.env.RAZORPAY_PRO_QUARTERLY_PLAN_ID,
+    halfyearly: process.env.RAZORPAY_PRO_HALFYEARLY_PLAN_ID,
+    annual:     process.env.RAZORPAY_PRO_ANNUAL_PLAN_ID,
+  },
+  studio: {
+    monthly:    process.env.RAZORPAY_STUDIO_PLAN_ID,
+    quarterly:  process.env.RAZORPAY_STUDIO_QUARTERLY_PLAN_ID,
+    halfyearly: process.env.RAZORPAY_STUDIO_HALFYEARLY_PLAN_ID,
+    annual:     process.env.RAZORPAY_STUDIO_ANNUAL_PLAN_ID,
+  },
+  elite: {
+    monthly:    process.env.RAZORPAY_ELITE_PLAN_ID,
+    quarterly:  process.env.RAZORPAY_ELITE_QUARTERLY_PLAN_ID,
+    halfyearly: process.env.RAZORPAY_ELITE_HALFYEARLY_PLAN_ID,
+    annual:     process.env.RAZORPAY_ELITE_ANNUAL_PLAN_ID,
+  },
+  business: {
+    monthly:    process.env.RAZORPAY_BUSINESS_PLAN_ID,
+    quarterly:  process.env.RAZORPAY_BUSINESS_QUARTERLY_PLAN_ID,
+    halfyearly: process.env.RAZORPAY_BUSINESS_HALFYEARLY_PLAN_ID,
+    annual:     process.env.RAZORPAY_BUSINESS_ANNUAL_PLAN_ID,
+  },
+}
+
+export function getRazorpayPlanId(planId: string, cycleId: string): string | null {
+  return RAZORPAY_PLAN_IDS[planId]?.[cycleId as BillingCycle['id']] ?? null
+}
+
 export function planFromRazorpayPlanId(razorpayPlanId: string): Plan {
-  return PLANS.find(p => p.razorpayPlanId === razorpayPlanId) ?? PLANS[0]
+  for (const plan of PLANS) {
+    const ids = RAZORPAY_PLAN_IDS[plan.id]
+    if (ids && Object.values(ids).includes(razorpayPlanId)) return plan
+  }
+  return PLANS[0]
 }

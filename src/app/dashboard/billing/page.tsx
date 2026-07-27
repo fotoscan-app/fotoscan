@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { PLANS, getPlanById } from '@/lib/plans'
+import { PLANS, BILLING_CYCLES, getPlanById, getPlanPrice } from '@/lib/plans'
+import type { BillingCycle } from '@/lib/plans'
 import { formatBytes } from '@/lib/utils'
 
 const IS_DEV_BILLING = process.env.NEXT_PUBLIC_DEV_BILLING === 'true'
@@ -43,8 +44,10 @@ export default function BillingPage() {
   const [upgrading, setUpgrading] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [cycle, setCycle] = useState<BillingCycle['id']>('monthly')
   const searchParams = useSearchParams()
   const justUpgraded = searchParams.get('success') === '1'
+  const selectedCycle = BILLING_CYCLES.find(c => c.id === cycle)!
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -61,7 +64,7 @@ export default function BillingPage() {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, cycleId: cycle }),
       })
       const d = await res.json()
       if (!d.success) {
@@ -91,7 +94,7 @@ export default function BillingPage() {
         subscription_id: d.data.subscriptionId,
         name: 'QuickPik',
         image: 'https://www.quickpik.in/logo.jpeg',
-        description: `${planName} Plan — Monthly`,
+        description: `${planName} Plan — ${selectedCycle.label}`,
         prefill: { email: user.email, name: user.name },
         theme: { color: '#0ea5e9' },
         handler: async function (response: {
@@ -259,15 +262,38 @@ export default function BillingPage() {
       )}
 
       {/* Plan cards */}
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        {user.plan === 'business' ? 'Your plan' : 'Upgrade your plan'}
-      </h2>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">
+          {user.plan === 'business' ? 'Your plan' : 'Upgrade your plan'}
+        </h2>
+        <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1">
+          {BILLING_CYCLES.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setCycle(c.id)}
+              className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                cycle === c.id
+                  ? 'bg-white shadow text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {c.label}
+              {c.discountPct > 0 && (
+                <span className="ml-1 bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  -{c.discountPct}%
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         {PLANS.map(plan => {
           const isCurrent = plan.id === user.plan
           const currentIdx = PLANS.findIndex(p => p.id === user.plan)
           const thisIdx = PLANS.findIndex(p => p.id === plan.id)
           const isDowngrade = thisIdx < currentIdx
+          const { monthly, total } = plan.priceINR > 0 ? getPlanPrice(plan, cycle) : { monthly: 0, total: 0 }
 
           return (
             <div key={plan.id}
@@ -283,8 +309,15 @@ export default function BillingPage() {
                   <span className="text-2xl font-extrabold text-gray-900">Free</span>
                 ) : (
                   <>
-                    <span className="text-2xl font-extrabold text-gray-900">₹{plan.priceINR.toLocaleString('en-IN')}</span>
-                    <span className="text-gray-400 text-xs ml-1">/ month</span>
+                    <div>
+                      <span className="text-2xl font-extrabold text-gray-900">₹{monthly.toLocaleString('en-IN')}</span>
+                      <span className="text-gray-400 text-xs ml-1">/ month</span>
+                    </div>
+                    {selectedCycle.months > 1 && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Billed ₹{total.toLocaleString('en-IN')} every {selectedCycle.months} months
+                      </p>
+                    )}
                   </>
                 )}
               </div>

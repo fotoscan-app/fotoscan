@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getRazorpay } from '@/lib/razorpay'
-import { PLANS } from '@/lib/plans'
+import { PLANS, BILLING_CYCLES, getRazorpayPlanId } from '@/lib/plans'
 import { db } from '@/lib/db'
 import { verifyToken, COOKIE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
-const schema = z.object({ planId: z.enum(['pro', 'studio', 'elite', 'business']) })
+const schema = z.object({
+  planId:  z.enum(['pro', 'studio', 'elite', 'business']),
+  cycleId: z.enum(['monthly', 'quarterly', 'halfyearly', 'annual']).default('monthly'),
+})
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get(COOKIE)?.value
@@ -19,8 +22,10 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ success: false, error: 'Invalid plan' }, { status: 400 })
 
   const plan = PLANS.find(p => p.id === parsed.data.planId)
-  if (!plan?.razorpayPlanId) {
-    return NextResponse.json({ success: false, error: 'Plan not configured — Razorpay plan ID missing in env' }, { status: 400 })
+  const cycle = BILLING_CYCLES.find(c => c.id === parsed.data.cycleId)!
+  const razorpayPlanId = plan ? getRazorpayPlanId(plan.id, cycle.id) : null
+  if (!plan || !razorpayPlanId) {
+    return NextResponse.json({ success: false, error: 'Plan not configured — Razorpay plan ID missing in env for this billing cycle' }, { status: 400 })
   }
 
   const user = await db.user.findUnique({ where: { id: payload.userId } })
@@ -51,17 +56,20 @@ export async function POST(req: NextRequest) {
       await db.user.update({ where: { id: user.id }, data: { razorpayCustomerId: customerId } })
     }
 
-    // Create subscription (120 cycles ≈ 10 years, effectively unlimited)
+    // total_count scaled so every cycle still renews for ~10 years
+    // (120 monthly cycles ≈ 10 years; a cycle billed every N months needs 120/N cycles)
+    const totalCount = Math.round(120 / cycle.months)
+
     const rzp = getRazorpay()
     const subscription = await rzp.subscriptions.create({
-      plan_id: plan.razorpayPlanId,
+      plan_id: razorpayPlanId,
       customer_notify: 1,
       quantity: 1,
-      total_count: 120,
-      notes: { userId: user.id, planId: plan.id },
+      total_count: totalCount,
+      notes: { userId: user.id, planId: plan.id, cycle: cycle.id },
     } as Parameters<typeof rzp.subscriptions.create>[0])
 
-    logger.info('BILLING', 'Razorpay subscription created', { userId: user.id, plan: plan.id })
+    logger.info('BILLING', 'Razorpay subscription created', { userId: user.id, plan: plan.id, cycle: cycle.id })
 
     return NextResponse.json({
       success: true,
