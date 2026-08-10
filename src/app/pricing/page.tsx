@@ -5,7 +5,85 @@ import Image from 'next/image'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { BoltIcon, CubeIcon } from '@heroicons/react/24/outline'
 import { PLANS, EVENT_PACKS, BILLING_CYCLES, getPlanPrice } from '@/lib/plans'
-import type { BillingCycle } from '@/lib/plans'
+import type { BillingCycle, EventPack } from '@/lib/plans'
+
+// Event Packs have no self-serve checkout yet — this captures interest
+// (name/email/phone) and emails the team so they can follow up and close the
+// sale manually, instead of silently sending "Buy" clicks to /register.
+function EventPackCTA({ pack }: { pack: EventPack }) {
+  const [open, setOpen] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({ name: '', email: '', phone: '' })
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/leads/event-pack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, packId: pack.id }),
+      })
+      const d = await res.json()
+      if (!d.success) { setError(d.error || 'Something went wrong. Please try again.'); return }
+      setSubmitted(true)
+    } catch {
+      setError('Could not reach server. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="text-center py-3 px-4 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm font-semibold">
+        Thanks! We&apos;ll reach out shortly.
+      </div>
+    )
+  }
+
+  if (open) {
+    return (
+      <form onSubmit={submit} className="space-y-2">
+        <input required placeholder="Your name" value={form.name}
+          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          className="input-field text-sm w-full" />
+        <input required type="email" placeholder="Email" value={form.email}
+          onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+          className="input-field text-sm w-full" />
+        <input type="tel" placeholder="Phone (optional)" value={form.phone}
+          onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+          className="input-field text-sm w-full" />
+        {error && <p className="text-red-500 text-xs">{error}</p>}
+        <div className="flex items-center gap-2">
+          <button type="submit" disabled={submitting}
+            className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-50 transition-colors">
+            {submitting ? 'Sending…' : 'Request callback'}
+          </button>
+          <button type="button" onClick={() => setOpen(false)} disabled={submitting}
+            className="text-sm text-gray-400 hover:text-gray-600 shrink-0">Cancel</button>
+        </div>
+      </form>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className={`text-center py-3 px-4 rounded-xl font-semibold text-sm transition-colors ${
+        pack.highlighted
+          ? 'bg-brand-500 hover:bg-brand-600 text-white'
+          : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
+      }`}
+    >
+      Buy {pack.name}
+    </button>
+  )
+}
 
 export default function PricingPage() {
   const [cycle, setCycle] = useState<BillingCycle['id']>('monthly')
@@ -208,16 +286,7 @@ export default function PricingPage() {
                   </li>
                 </ul>
 
-                <Link
-                  href="/register"
-                  className={`text-center py-3 px-4 rounded-xl font-semibold text-sm transition-colors ${
-                    pack.highlighted
-                      ? 'bg-brand-500 hover:bg-brand-600 text-white'
-                      : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  Buy {pack.name}
-                </Link>
+                <EventPackCTA pack={pack} />
               </div>
             ))}
           </div>
