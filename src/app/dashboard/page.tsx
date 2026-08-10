@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { PlusIcon, PhotoIcon, UserGroupIcon, CalendarDaysIcon, BoltIcon, CreditCardIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PhotoIcon, UserGroupIcon, CalendarDaysIcon, BoltIcon, CreditCardIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { formatBytes, formatDate } from '@/lib/utils'
 import { getPlanById } from '@/lib/plans'
@@ -229,37 +229,61 @@ export default function DashboardPage() {
         const plan = getPlanById(user.plan)
         const statusInfo = STATUS_LABELS[user.subscriptionStatus] ?? STATUS_LABELS.active
         const isTotalCap = plan.id === 'starter' // Starter's limits are lifetime totals, not monthly
+        // Always measure against the plan's real limit, not user.storageLimit —
+        // that DB field can legitimately lag behind the plan (e.g. during a
+        // grace period after a stale value let someone upload past their
+        // entitlement) so it's not a reliable signal for "should this person
+        // upgrade?".
+        const storageOverPlan = user.storageUsed > plan.storageLimit
+        const storageNearPlan = !storageOverPlan && user.storageUsed >= plan.storageLimit * 0.9
         return (
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-gray-900">{plan.name} plan</h2>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
+          <>
+            {storageOverPlan && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+                <ExclamationTriangleIcon className="w-5 h-5 text-red-600 shrink-0" />
+                <div>
+                  <p className="text-red-800 font-medium">You&apos;ve used {formatBytes(user.storageUsed)}, over the {plan.name} plan&apos;s {formatBytes(plan.storageLimit)} limit.</p>
+                  <p className="text-red-600 text-sm">Upgrade now to keep uploading and avoid interruption. <Link href="/dashboard/billing" className="underline font-medium">Upgrade plan →</Link></p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">
-                  {plan.priceINR === 0 ? 'Free' : <>₹{plan.priceINR.toLocaleString('en-IN')}<span className="text-gray-400">/mo</span></>}
-                </span>
-                <Link href="/dashboard/billing" className="text-sm text-brand-600 hover:underline font-medium">
-                  {plan.id === 'business' ? 'Manage plan' : 'Upgrade'}
-                </Link>
+            )}
+            {storageNearPlan && (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+                <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 shrink-0" />
+                <p className="text-amber-800 text-sm">You&apos;re nearing your {plan.name} plan&apos;s storage limit. <Link href="/dashboard/billing" className="underline font-medium">Consider upgrading →</Link></p>
               </div>
-            </div>
+            )}
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold text-gray-900">{plan.name} plan</h2>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-500">
+                    {plan.priceINR === 0 ? 'Free' : <>₹{plan.priceINR.toLocaleString('en-IN')}<span className="text-gray-400">/mo</span></>}
+                  </span>
+                  <Link href="/dashboard/billing" className="text-sm text-brand-600 hover:underline font-medium">
+                    {plan.id === 'business' ? 'Manage plan' : 'Upgrade'}
+                  </Link>
+                </div>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <UsageRow label="Storage" used={user.storageUsed} limit={user.storageLimit} format={formatBytes} />
-              <UsageRow
-                label={isTotalCap ? 'Events (total)' : 'Events this month'}
-                used={isTotalCap ? stats?.totalEvents ?? 0 : stats?.eventsThisMonth ?? 0}
-                limit={plan.eventLimit}
-              />
-              <UsageRow
-                label={isTotalCap ? 'Face scans (total)' : 'Face scans this month'}
-                used={isTotalCap ? stats?.totalGuests ?? 0 : stats?.scansThisMonth ?? 0}
-                limit={plan.scanLimit}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <UsageRow label="Storage" used={user.storageUsed} limit={plan.storageLimit} format={formatBytes} />
+                <UsageRow
+                  label={isTotalCap ? 'Events (total)' : 'Events this month'}
+                  used={isTotalCap ? stats?.totalEvents ?? 0 : stats?.eventsThisMonth ?? 0}
+                  limit={plan.eventLimit}
+                />
+                <UsageRow
+                  label={isTotalCap ? 'Face scans (total)' : 'Face scans this month'}
+                  used={isTotalCap ? stats?.totalGuests ?? 0 : stats?.scansThisMonth ?? 0}
+                  limit={plan.scanLimit}
+                />
+              </div>
             </div>
-          </div>
+          </>
         )
       })()}
     </div>

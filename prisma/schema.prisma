@@ -23,7 +23,7 @@ model User {
   gstNumber            String?
   plan                 String   @default("starter")
   storageUsed          BigInt   @default(0)
-  storageLimit         BigInt   @default(10737418240)
+  storageLimit         BigInt   @default(5368709120) // 5 GB — must match PLANS['starter'].storageLimit in src/lib/plans.ts
   mobile               String?
   isActive             Boolean  @default(true)
   isAdmin              Boolean  @default(false)

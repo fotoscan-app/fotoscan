@@ -5,6 +5,7 @@ import { hashPassword, createToken, COOKIE, COOKIE_MAX_AGE } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
 import { serializeBigInt } from '@/lib/utils'
+import { getPlanById } from '@/lib/plans'
 
 const schema = z.object({
   name:         z.string().min(2).max(100),
@@ -29,8 +30,17 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await hashPassword(password)
+    // Set storageLimit explicitly from the Starter plan rather than relying on
+    // the DB column default — that default has drifted out of sync with
+    // plans.ts before (10GB vs the advertised 5GB) and silently let every new
+    // free signup upload twice their entitled storage.
+    const starter = getPlanById('starter')
     const user = await db.user.create({
-      data: { name, email, passwordHash, businessName: businessName || null, mobile: mobile || null },
+      data: {
+        name, email, passwordHash,
+        businessName: businessName || null, mobile: mobile || null,
+        storageLimit: BigInt(starter.storageLimit),
+      },
       select: { id: true, email: true, name: true, businessName: true, plan: true, storageUsed: true, storageLimit: true },
     })
 

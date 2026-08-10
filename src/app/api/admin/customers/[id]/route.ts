@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminUser } from '@/lib/admin-auth'
 import { db } from '@/lib/db'
+import { getPlanById } from '@/lib/plans'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getAdminUser()
@@ -41,10 +42,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json()
   const data: Record<string, unknown> = {}
   if (typeof body.isActive === 'boolean') data.isActive = body.isActive
-  if (body.plan) data.plan = body.plan
+  // Changing plan must also resync storageLimit — otherwise a manual admin
+  // downgrade/upgrade leaves the old plan's byte limit in place, same bug
+  // class as the stale-default issue on registration.
+  if (body.plan) {
+    data.plan = body.plan
+    data.storageLimit = BigInt(getPlanById(body.plan).storageLimit)
+  }
 
   const updated = await db.user.update({ where: { id }, data,
-    select: { id: true, isActive: true, plan: true },
+    select: { id: true, isActive: true, plan: true, storageLimit: true },
   })
   return NextResponse.json(updated)
 }
