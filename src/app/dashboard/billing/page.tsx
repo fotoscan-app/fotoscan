@@ -170,7 +170,11 @@ export default function BillingPage() {
 
   const currentPlan = getPlanById(user.plan)
   const statusInfo = STATUS_LABELS[user.subscriptionStatus] ?? STATUS_LABELS.active
-  const storagePercent = Math.min(100, (user.storageUsed / user.storageLimit) * 100)
+  // Measure against the plan's real limit, not user.storageLimit — that DB
+  // field can legitimately lag behind the plan during a grace period, so it's
+  // not a reliable "should this person upgrade?" signal.
+  const storagePercent = Math.min(100, (user.storageUsed / currentPlan.storageLimit) * 100)
+  const storageOverPlan = user.storageUsed > currentPlan.storageLimit
   const hasPaidPlan = user.plan !== 'starter'
   const canCancel = hasPaidPlan && user.subscriptionStatus === 'active'
 
@@ -209,6 +213,16 @@ export default function BillingPage() {
         </div>
       )}
 
+      {storageOverPlan && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <ExclamationTriangleIcon className="w-5 h-5 text-red-600 shrink-0" />
+          <div>
+            <p className="text-red-800 font-medium">You&apos;ve used {formatBytes(user.storageUsed)}, over the {currentPlan.name} plan&apos;s {formatBytes(currentPlan.storageLimit)} limit.</p>
+            <p className="text-red-600 text-sm">Upgrade below to keep uploading without interruption.</p>
+          </div>
+        </div>
+      )}
+
       {/* Current plan */}
       <div className="card p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -232,7 +246,7 @@ export default function BillingPage() {
         <div>
           <div className="flex items-center justify-between text-sm mb-1.5">
             <span className="text-gray-600 font-medium">Storage</span>
-            <span className="text-gray-500">{formatBytes(user.storageUsed)} / {formatBytes(user.storageLimit)}</span>
+            <span className="text-gray-500">{formatBytes(user.storageUsed)} / {formatBytes(currentPlan.storageLimit)}</span>
           </div>
           <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
