@@ -1,5 +1,5 @@
 type Level = 'INFO' | 'WARN' | 'ERROR' | 'FATAL'
-type Module = 'AUTH' | 'UPLOAD' | 'FACE_MATCH' | 'MODERATION' | 'STORAGE' | 'BRANDING' | 'BILLING' | 'SYSTEM'
+type Module = 'AUTH' | 'UPLOAD' | 'FACE_MATCH' | 'MODERATION' | 'STORAGE' | 'BRANDING' | 'BILLING' | 'LEADS' | 'SYSTEM'
 
 interface LogContext {
   userId?: string
