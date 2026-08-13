@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       }),
     },
     select: {
-      id: true, name: true, email: true, businessName: true,
+      id: true, name: true, email: true, mobile: true, businessName: true,
       plan: true, isActive: true, storageUsed: true,
       subscriptionStatus: true, createdAt: true,
       _count: { select: { events: true } },

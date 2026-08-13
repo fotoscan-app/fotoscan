@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { formatBytes } from '@/lib/utils'
 
 interface Customer {
-  id: string; name: string; email: string; businessName: string | null
+  id: string; name: string; email: string; mobile: string | null; businessName: string | null
   plan: string; isActive: boolean; storageUsed: number
   subscriptionStatus: string; createdAt: string
   _count: { events: number }
@@ -45,12 +45,23 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
           <p className="text-sm text-gray-500 mt-1">{customers.length} registered organizers</p>
         </div>
-        {/* Search */}
-        <div className="relative w-72">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search name, email…"
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative w-72">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search name, email…"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+          </div>
+          {/* Exports */}
+          <a href={`/api/admin/customers/export?search=${encodeURIComponent(search)}`}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <ArrowDownTrayIcon className="w-4 h-4" /> Export Customers
+          </a>
+          <a href="/api/admin/guests/export"
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors whitespace-nowrap">
+            <ArrowDownTrayIcon className="w-4 h-4" /> Export Guest Data
+          </a>
         </div>
       </div>
 
@@ -58,16 +69,16 @@ export default function CustomersPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {['Customer', 'Plan', 'Events', 'Storage', 'Status', 'Joined', ''].map(h => (
+              {['Customer', 'Mobile', 'Plan', 'Events', 'Storage', 'Status', 'Joined', ''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
             ) : customers.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No customers found.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No customers found.</td></tr>
             ) : customers.map(c => (
               <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
@@ -75,6 +86,7 @@ export default function CustomersPage() {
                   <p className="text-xs text-gray-400">{c.email}</p>
                   {c.businessName && <p className="text-xs text-gray-400">{c.businessName}</p>}
                 </td>
+                <td className="px-4 py-3 text-gray-700">{c.mobile || <span className="text-gray-300">—</span>}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${PLAN_BADGE[c.plan] ?? PLAN_BADGE.starter}`}>
                     {c.plan}

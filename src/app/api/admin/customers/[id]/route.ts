@@ -11,7 +11,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const customer = await db.user.findUnique({
     where: { id },
     select: {
-      id: true, name: true, email: true, businessName: true,
+      id: true, name: true, email: true, mobile: true, businessName: true,
       plan: true, isActive: true, storageUsed: true, storageLimit: true,
       subscriptionStatus: true, createdAt: true, updatedAt: true,
       events: {
