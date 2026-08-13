@@ -12,7 +12,7 @@ interface Event {
 }
 
 interface Customer {
-  id: string; name: string; email: string; businessName: string | null
+  id: string; name: string; email: string; mobile: string | null; businessName: string | null
   plan: string; isActive: boolean; storageUsed: number; storageLimit: number
   subscriptionStatus: string; createdAt: string
   events: Event[]
@@ -68,6 +68,7 @@ export default function CustomerDetailPage() {
           <div>
             <h1 className="text-xl font-bold text-gray-900">{customer.name}</h1>
             <p className="text-gray-500 text-sm">{customer.email}</p>
+            <p className="text-gray-500 text-sm">{customer.mobile || <span className="text-gray-300">No mobile on file</span>}</p>
             {customer.businessName && <p className="text-gray-400 text-sm">{customer.businessName}</p>}
             <p className="text-xs text-gray-400 mt-1">
               Joined {new Date(customer.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
