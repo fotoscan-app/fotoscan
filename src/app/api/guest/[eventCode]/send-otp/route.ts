@@ -6,6 +6,29 @@ import { sendVerification, normalizeMobile } from '@/lib/whatsapp'
 
 const schema = z.object({ mobile: z.string().min(7).max(20) })
 
+// Temporary kill-switch: while OTP delivery (WhatsApp / SMS / email) is broken,
+// set GUEST_OTP_DISABLED=true to let guests through the details step without a
+// code. Remove the env var to restore normal OTP verification.
+const OTP_DISABLED = process.env.GUEST_OTP_DISABLED === 'true'
+
+// Issue a fresh verifiedToken for this mobile+event without sending a code.
+// Used both for returning guests and (when OTP_DISABLED) for everyone.
+async function issueVerifiedToken(mobile: string, eventCode: string): Promise<string> {
+  const verifiedToken = randomUUID()
+  await db.whatsappOtp.create({
+    data: {
+      mobile,
+      code: 'verified',
+      purpose: 'guest',
+      refId: eventCode.toUpperCase(),
+      verifiedToken,
+      used: false,
+      expiresAt: new Date(Date.now() + 15 * 60_000),
+    },
+  })
+  return verifiedToken
+}
+
 // Simple in-process rate limiter: max 5 OTP requests per IP per 10 minutes
 const ipAttempts = new Map<string, { count: number; resetAt: number }>()
 
@@ -42,6 +65,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
 
     const mobile = normalizeMobile(parsed.data.mobile)
 
+    // OTP delivery temporarily disabled — let every guest straight through.
+    if (OTP_DISABLED) {
+      const verifiedToken = await issueVerifiedToken(mobile, eventCode)
+      return NextResponse.json({ success: true, data: { otpRequired: false, verifiedToken } })
+    }
+
     // Skip OTP for a mobile number that has already completed guest verification before
     // (any event) — issue a fresh verifiedToken directly instead of texting a new code.
     const priorVerification = await db.whatsappOtp.findFirst({
@@ -50,18 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
     })
 
     if (priorVerification) {
-      const verifiedToken = randomUUID()
-      await db.whatsappOtp.create({
-        data: {
-          mobile,
-          code: 'verified',
-          purpose: 'guest',
-          refId: eventCode.toUpperCase(),
-          verifiedToken,
-          used: false,
-          expiresAt: new Date(Date.now() + 15 * 60_000),
-        },
-      })
+      const verifiedToken = await issueVerifiedToken(mobile, eventCode)
       return NextResponse.json({ success: true, data: { otpRequired: false, verifiedToken } })
     }
 

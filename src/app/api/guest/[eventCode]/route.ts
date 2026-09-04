@@ -28,6 +28,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ even
         businessName: event.organizer.businessName || event.organizer.name,
         logoUrl: event.organizer.logoKey ? cdnUrl(event.organizer.logoKey) : null,
       },
+      // When true, the guest page skips the OTP step (delivery temporarily disabled).
+      otpDisabled: process.env.GUEST_OTP_DISABLED === 'true',
     },
   })
 }

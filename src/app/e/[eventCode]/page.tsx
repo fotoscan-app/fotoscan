@@ -18,6 +18,7 @@ export default function GuestEventPage() {
   const [event, setEvent]     = useState<EventInfo | null>(null)
   const [branding, setBranding] = useState<Branding | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [otpDisabled, setOtpDisabled] = useState(false)
 
   // Step state
   const [step, setStep]                 = useState<Step>('details')
@@ -42,7 +43,11 @@ export default function GuestEventPage() {
     fetch(`/api/guest/${eventCode}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) { setEvent(d.data.event); setBranding(d.data.branding) }
+        if (d.success) {
+          setEvent(d.data.event)
+          setBranding(d.data.branding)
+          setOtpDisabled(!!d.data.otpDisabled)
+        }
         else setNotFound(true)
       })
   }, [eventCode])
@@ -150,6 +155,8 @@ export default function GuestEventPage() {
     </div>
   )
 
+  const steps: Step[] = otpDisabled ? ['details', 'selfie'] : ['details', 'otp', 'selfie']
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -175,14 +182,14 @@ export default function GuestEventPage() {
 
         {/* Step indicators */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          {(['details', 'otp', 'selfie'] as Step[]).map((s, i) => (
+          {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                 step === s ? 'bg-brand-600 text-white' :
-                (['details', 'otp', 'selfie'].indexOf(step) > i) ? 'bg-brand-100 text-brand-600' :
+                (steps.indexOf(step) > i) ? 'bg-brand-100 text-brand-600' :
                 'bg-gray-100 text-gray-400'
               }`}>{i + 1}</div>
-              {i < 2 && <div className={`w-8 h-0.5 ${(['details', 'otp', 'selfie'].indexOf(step) > i) ? 'bg-brand-300' : 'bg-gray-200'}`} />}
+              {i < steps.length - 1 && <div className={`w-8 h-0.5 ${(steps.indexOf(step) > i) ? 'bg-brand-300' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>
@@ -194,7 +201,11 @@ export default function GuestEventPage() {
             <>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-1">Your details</h2>
-                <p className="text-gray-500 text-sm">Enter your name and WhatsApp number to receive an OTP.</p>
+                <p className="text-gray-500 text-sm">
+                  {otpDisabled
+                    ? 'Enter your name and WhatsApp number to continue.'
+                    : 'Enter your name and WhatsApp number to receive an OTP.'}
+                </p>
               </div>
 
               <div>
@@ -217,7 +228,7 @@ export default function GuestEventPage() {
                   <input type="tel" className="input-field pl-9" placeholder="+91 98765 43210"
                     value={guestMobile} onChange={e => setGuestMobile(e.target.value)} />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">OTP will be sent to this WhatsApp number</p>
+                {!otpDisabled && <p className="text-xs text-gray-400 mt-1">OTP will be sent to this WhatsApp number</p>}
               </div>
 
               <label className="flex items-start gap-2 cursor-pointer">
@@ -236,7 +247,9 @@ export default function GuestEventPage() {
 
               <button onClick={sendOtp} disabled={sending || !consent}
                 className="btn-primary w-full flex items-center justify-center gap-2 py-3">
-                {sending ? 'Sending OTP…' : 'Send OTP on WhatsApp'}
+                {otpDisabled
+                  ? (sending ? 'Please wait…' : 'Continue')
+                  : (sending ? 'Sending OTP…' : 'Send OTP on WhatsApp')}
               </button>
             </>
           )}
