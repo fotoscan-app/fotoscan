@@ -19,6 +19,39 @@ export default function GuestResultsPage() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<string | null>(null)
 
+  // Best-effort: tell the server which matched photos this guest saved, so the
+  // organizer's admin panel can report face-scan → download conversion.
+  function logDownload(photoIds: string[]) {
+    if (!token || photoIds.length === 0) return
+    const payload = JSON.stringify({ sessionToken: token, photoIds })
+    try {
+      const blob = new Blob([payload], { type: 'application/json' })
+      if (navigator.sendBeacon(`/api/guest/${eventCode}/download-log`, blob)) return
+    } catch { /* fall through to fetch */ }
+    fetch(`/api/guest/${eventCode}/download-log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {})
+  }
+
+  function downloadAll() {
+    const withUrl = photos.filter(p => p.downloadUrl)
+    if (withUrl.length === 0) return
+    logDownload(withUrl.map(p => p.id))
+    withUrl.forEach((p, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a')
+        a.href = p.downloadUrl as string
+        a.download = p.fileName
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }, i * 400)
+    })
+  }
+
   useEffect(() => {
     if (!token) { router.push(`/e/${eventCode}`); return }
     fetch(`/api/guest/${eventCode}/session/${token}`)
@@ -66,6 +99,12 @@ export default function GuestResultsPage() {
                 Found {matchCount} photo{matchCount !== 1 ? 's' : ''} with you!
               </h2>
               <p className="text-gray-500 text-sm">Tap any photo to view full size and download.</p>
+              {photos.some(p => p.downloadUrl) && (
+                <button onClick={downloadAll}
+                  className="btn-primary inline-flex items-center gap-2 text-sm mt-4">
+                  <ArrowDownTrayIcon className="w-4 h-4" /> Download all
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -97,7 +136,7 @@ export default function GuestResultsPage() {
                 {photo.downloadUrl && (
                   <a href={photo.downloadUrl} download={photo.fileName}
                     className="btn-primary flex items-center gap-2 text-sm"
-                    onClick={e => e.stopPropagation()}>
+                    onClick={e => { e.stopPropagation(); logDownload([photo.id]) }}>
                     <ArrowDownTrayIcon className="w-4 h-4" /> Download
                   </a>
                 )}

@@ -2,13 +2,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeftIcon, CalendarDaysIcon, PhotoIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CalendarDaysIcon, PhotoIcon, UserGroupIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { formatBytes } from '@/lib/utils'
 
 interface Event {
   id: string; name: string; eventDate: string | null
   status: string; photoCount: number; createdAt: string
-  _count: { guestSessions: number }
+  faceScans: number; downloaders: number; totalDownloads: number
 }
 
 interface Customer {
@@ -91,12 +91,14 @@ export default function CustomerDetailPage() {
         </div>
 
         {/* Stats row */}
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { icon: CalendarDaysIcon, label: 'Events',    value: customer.events.length },
-            { icon: PhotoIcon,        label: 'Photos',    value: customer.events.reduce((s, e) => s + e.photoCount, 0) },
-            { icon: UserGroupIcon,    label: 'Guests',    value: customer.events.reduce((s, e) => s + e._count.guestSessions, 0) },
-            { icon: null,             label: 'Plan',      value: <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${PLAN_BADGE[customer.plan]}`}>{customer.plan}</span> },
+            { icon: CalendarDaysIcon, label: 'Events',     value: customer.events.length },
+            { icon: PhotoIcon,        label: 'Photos',     value: customer.events.reduce((s, e) => s + e.photoCount, 0) },
+            { icon: UserGroupIcon,    label: 'Face Scans', value: customer.events.reduce((s, e) => s + e.faceScans, 0) },
+            { icon: ArrowDownTrayIcon, label: 'Downloaders', value: customer.events.reduce((s, e) => s + e.downloaders, 0) },
+            { icon: ArrowDownTrayIcon, label: 'Downloads', value: customer.events.reduce((s, e) => s + e.totalDownloads, 0) },
+            { icon: null,             label: 'Plan',       value: <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${PLAN_BADGE[customer.plan]}`}>{customer.plan}</span> },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="bg-gray-50 rounded-lg p-3 text-center">
               {Icon && <Icon className="w-5 h-5 text-gray-400 mx-auto mb-1" />}
@@ -129,7 +131,7 @@ export default function CustomerDetailPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['Event Name', 'Date', 'Photos', 'Guests', 'Status'].map(h => (
+                {['Event Name', 'Date', 'Photos', 'Face Scans', 'Downloaders', 'Downloads', 'Status'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -142,7 +144,14 @@ export default function CustomerDetailPage() {
                     {ev.eventDate ? new Date(ev.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </td>
                   <td className="px-4 py-3 text-gray-700">{ev.photoCount}</td>
-                  <td className="px-4 py-3 text-gray-700">{ev._count.guestSessions}</td>
+                  <td className="px-4 py-3 text-gray-700">{ev.faceScans}</td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {ev.downloaders}
+                    {ev.faceScans > 0 && (
+                      <span className="text-xs text-gray-400"> ({Math.round((ev.downloaders / ev.faceScans) * 100)}%)</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">{ev.totalDownloads}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold capitalize
                       ${ev.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>

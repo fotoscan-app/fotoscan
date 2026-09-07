@@ -11,6 +11,7 @@ export async function GET() {
   const sessions = await db.guestSession.findMany({
     select: {
       guestName: true, guestMobile: true, matchCount: true,
+      downloadCount: true, downloadedPhotoIds: true, lastDownloadAt: true,
       createdAt: true, expiresAt: true,
       event: {
         select: {
@@ -30,6 +31,9 @@ export async function GET() {
     organizer:      s.event.organizer.businessName || s.event.organizer.name,
     organizerEmail: s.event.organizer.email,
     matches:        s.matchCount,
+    downloads:      s.downloadCount,
+    photosSaved:    s.downloadedPhotoIds.length,
+    lastDownload:   s.lastDownloadAt ? s.lastDownloadAt.toISOString().slice(0, 16).replace('T', ' ') : '',
     createdAt:      s.createdAt.toISOString().slice(0, 16).replace('T', ' '),
     expiresAt:      s.expiresAt.toISOString().slice(0, 16).replace('T', ' '),
   }))
@@ -42,6 +46,9 @@ export async function GET() {
     { header: 'Organizer',       key: 'organizer',      width: 24 },
     { header: 'Organizer Email', key: 'organizerEmail', width: 28 },
     { header: 'Matched Photos',  key: 'matches',        width: 14 },
+    { header: 'Downloads',       key: 'downloads',      width: 12 },
+    { header: 'Photos Saved',    key: 'photosSaved',    width: 13 },
+    { header: 'Last Download',   key: 'lastDownload',   width: 18 },
     { header: 'Session Created', key: 'createdAt',      width: 18 },
     { header: 'Session Expires', key: 'expiresAt',      width: 18 },
   ], rows, `quickpik-guest-sessions-${new Date().toISOString().slice(0, 10)}.xlsx`)

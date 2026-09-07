@@ -27,8 +27,40 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
   if (!customer) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  // Face-scan → download activity per event.
+  //  - faceScans      = every selfie submitted (one GuestSession row each)
+  //  - downloaders    = distinct guests who saved at least one matched photo
+  //  - totalDownloads = number of photo-download click events
+  const eventIds = customer.events.map(e => e.id)
+  const [scanAgg, downloaderAgg] = eventIds.length
+    ? await Promise.all([
+        db.guestSession.groupBy({
+          by: ['eventId'],
+          where: { eventId: { in: eventIds } },
+          _count: { _all: true },
+          _sum: { downloadCount: true },
+        }),
+        db.guestSession.groupBy({
+          by: ['eventId'],
+          where: { eventId: { in: eventIds }, downloadCount: { gt: 0 } },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []]
+
+  const scanByEvent = new Map(scanAgg.map(r => [r.eventId, r]))
+  const downloadersByEvent = new Map(downloaderAgg.map(r => [r.eventId, r._count._all]))
+
+  const events = customer.events.map(({ _count, ...e }) => ({
+    ...e,
+    faceScans:      scanByEvent.get(e.id)?._count._all ?? _count.guestSessions,
+    totalDownloads: scanByEvent.get(e.id)?._sum.downloadCount ?? 0,
+    downloaders:    downloadersByEvent.get(e.id) ?? 0,
+  }))
+
   return NextResponse.json({
     ...customer,
+    events,
     storageUsed:  Number(customer.storageUsed),
     storageLimit: Number(customer.storageLimit),
   })

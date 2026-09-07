@@ -140,15 +140,23 @@ model WhatsappOtp {
 }
 
 model GuestSession {
-  id              String   @id @default(cuid())
-  eventId         String
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  sessionToken    String   @unique @default(cuid())
-  selfieS3Key     String?
-  matchedPhotoIds String[]
-  matchCount      Int      @default(0)
-  guestName       String   @default("")
-  guestMobile     String   @default("")
-  createdAt       DateTime @default(now())
-  expiresAt       DateTime
+  id                String   @id @default(cuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessionToken      String   @unique @default(cuid())
+  selfieS3Key       String?
+  matchedPhotoIds   String[]
+  matchCount        Int      @default(0)
+  // Download activity — populated by /api/guest/[eventCode]/download-log when a
+  // guest actually saves a matched photo. downloadCount counts click events;
+  // downloadedPhotoIds is the distinct set of photos this guest has saved.
+  downloadCount     Int      @default(0)
+  downloadedPhotoIds String[]
+  lastDownloadAt    DateTime?
+  guestName         String   @default("")
+  guestMobile       String   @default("")
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+
+  @@index([eventId])
 }
