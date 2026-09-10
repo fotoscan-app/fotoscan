@@ -9,7 +9,7 @@ export async function getAdminUser() {
   if (!payload) return null
   const user = await db.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, email: true, name: true, isAdmin: true },
+    select: { id: true, email: true, name: true, isAdmin: true, adminCanManagePlans: true },
   })
   if (!user?.isAdmin) return null
   return user

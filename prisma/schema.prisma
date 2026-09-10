@@ -27,6 +27,10 @@ model User {
   mobile               String?
   isActive             Boolean  @default(true)
   isAdmin              Boolean  @default(false)
+  // For admin accounts only: gate the customer plan-change control.
+  // Full admins keep the default true; a restricted admin (view + disable
+  // account, but no plan changes) is set to false.
+  adminCanManagePlans  Boolean  @default(true)
   razorpayCustomerId     String?  @unique
   razorpaySubscriptionId String?  @unique
   razorpayPlanId         String?

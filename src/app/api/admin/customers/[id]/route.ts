@@ -40,6 +40,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params
   const body = await req.json()
+
+  // Restricted admins can view customers and enable/disable accounts, but
+  // may not change a customer's plan.
+  if (body.plan !== undefined && !admin.adminCanManagePlans) {
+    return NextResponse.json({ error: 'Not permitted to change plans' }, { status: 403 })
+  }
+
   const data: Record<string, unknown> = {}
   if (typeof body.isActive === 'boolean') data.isActive = body.isActive
   // Changing plan must also resync storageLimit — otherwise a manual admin

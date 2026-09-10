@@ -33,10 +33,18 @@ export default function CustomerDetailPage() {
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
+  // Undefined until loaded; the PATCH API is the real enforcement, this only
+  // hides the control. Treat anything but an explicit false as allowed.
+  const [canManagePlans, setCanManagePlans] = useState<boolean | undefined>(undefined)
+  const planLocked = canManagePlans === false
 
   useEffect(() => {
     fetch(`/api/admin/customers/${id}`).then(r => r.json()).then(setCustomer).finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    fetch('/api/admin/me').then(r => r.json()).then(m => setCanManagePlans(m?.canManagePlans)).catch(() => {})
+  }, [])
 
   async function patch(data: Partial<{ isActive: boolean; plan: string }>) {
     setSaving(true)
@@ -75,12 +83,16 @@ export default function CustomerDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Plan selector */}
-            <select value={customer.plan} disabled={saving}
-              onChange={e => patch({ plan: e.target.value })}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600">
-              {PLANS.map(p => <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-            </select>
+            {/* Plan selector — hidden control for restricted admins */}
+            <div className="flex flex-col">
+              <select value={customer.plan} disabled={saving || planLocked}
+                title={planLocked ? "You don't have permission to change plans" : undefined}
+                onChange={e => patch({ plan: e.target.value })}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed">
+                {PLANS.map(p => <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              </select>
+              {planLocked && <span className="text-[11px] text-gray-400 mt-1">Plan changes not permitted</span>}
+            </div>
             {/* Toggle active */}
             <button disabled={saving} onClick={() => patch({ isActive: !customer.isActive })}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50
