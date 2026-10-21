@@ -114,6 +114,20 @@ model ModerationFlag {
   createdAt  DateTime @default(now())
 }
 
+// Email verification codes for new sign-ups. The code is stored hashed;
+// a row is burned after 5 wrong attempts.
+model SignupOtp {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
 model PasswordReset {
   id        String   @id @default(cuid())
   email     String

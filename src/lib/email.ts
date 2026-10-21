@@ -30,6 +30,32 @@ export async function sendOtpEmail(to: string, otp: string, name: string) {
   if (error) throw new Error(`Resend failed to send OTP email: ${error.name} — ${error.message}`)
 }
 
+export async function sendSignupOtpEmail(to: string, otp: string, name: string) {
+  // name comes straight from the public sign-up form
+  const safeName = name.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
+  const { error } = await resend.emails.send({
+    from: process.env.FROM_EMAIL!,
+    to,
+    subject: `${otp} is your QuickPik verification code`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfaf3;border-radius:12px;border:1px solid #eddfa8">
+        <h2 style="color:#7a5e1b;margin-bottom:8px">Verify your email</h2>
+        <p style="color:#555;margin-bottom:24px">Hi ${safeName}, welcome to QuickPik! Use the code below to finish creating your account. It expires in <strong>10 minutes</strong>.</p>
+        <div style="background:#fff;border:2px solid #b8922e;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+          <span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#b8922e">${otp}</span>
+        </div>
+        <p style="color:#888;font-size:13px">If you didn't try to sign up, you can safely ignore this email.</p>
+        <hr style="border:none;border-top:1px solid #eddfa8;margin:24px 0"/>
+        <p style="color:#aaa;font-size:12px;text-align:center">QuickPik by Anss Studio Pvt. Ltd.</p>
+      </div>
+    `,
+    text: `Your QuickPik verification code is: ${otp}
+
+Expires in 10 minutes.`,
+  })
+  if (error) throw new Error(`Resend failed to send signup OTP email: ${error.name} — ${error.message}`)
+}
+
 // Event Packs (Starter/Growth/Studio Pack — the one-time "pay per event" tier
 // on /pricing) have no self-serve checkout built yet. Instead of a broken or
 // silent CTA, we capture interest and email the team to close the sale

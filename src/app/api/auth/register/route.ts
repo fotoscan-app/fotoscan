@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger'
 import { ErrorCodes } from '@/lib/error-codes'
 import { serializeBigInt } from '@/lib/utils'
 import { getPlanById } from '@/lib/plans'
+import { checkSignupOtp } from '@/lib/signup-otp'
 
 const schema = z.object({
   name:         z.string().min(2).max(100),
@@ -13,6 +14,7 @@ const schema = z.object({
   password:     z.string().min(8).max(100),
   businessName: z.string().max(100).optional(),
   mobile:       z.string().max(20).optional(),
+  otp:          z.string().length(6),
 })
 
 export async function POST(req: NextRequest) {
@@ -22,11 +24,20 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: 'Invalid input', details: parsed.error.flatten() }, { status: 400 })
     }
-    const { name, email, password, businessName, mobile } = parsed.data
+    const { name, email, password, businessName, mobile, otp } = parsed.data
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
       return NextResponse.json({ success: false, error: 'Email already registered' }, { status: 409 })
+    }
+
+    // Step 2 of sign-up: the account is only created once the emailed code checks out
+    const otpResult = await checkSignupOtp(email, otp)
+    if (otpResult === 'wrong') {
+      return NextResponse.json({ success: false, error: 'Incorrect code. Please try again.' }, { status: 400 })
+    }
+    if (otpResult === 'expired') {
+      return NextResponse.json({ success: false, error: 'This code has expired. Please request a new one.' }, { status: 400 })
     }
 
     const passwordHash = await hashPassword(password)
