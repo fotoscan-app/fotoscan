@@ -5,11 +5,12 @@ import Link from 'next/link'
 import {
   ArrowLeftIcon, ArrowUpTrayIcon, QrCodeIcon, ExclamationTriangleIcon,
   TrashIcon, PhotoIcon, UserGroupIcon, CheckCircleIcon, PhoneIcon, UserIcon,
-  FolderIcon, PlusIcon, PencilIcon, XMarkIcon,
+  FolderIcon, PlusIcon, PencilIcon, XMarkIcon, ShareIcon,
 } from '@heroicons/react/24/outline'
 import { formatBytes, formatDate } from '@/lib/utils'
 import ModerationQueue from '@/components/ModerationQueue'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
+import ShareGalleryModal from '@/components/ShareGalleryModal'
 
 interface Photo {
   id: string; fileName: string; fileSize: number; thumbnailUrl: string
@@ -28,7 +29,7 @@ interface GuestEntry {
 interface Event {
   id: string; name: string; description: string | null; eventDate: string | null
   venue: string | null; status: string; photoCount: number; pendingReviewCount: number
-  allowGuestDownload: boolean; eventCode: string; eventType: string; createdAt: string
+  allowGuestDownload: boolean; eventCode: string; eventType: string; createdAt: string; galleryToken: string | null
   folders: Folder[]; _count: { guestSessions: number }
 }
 
@@ -66,6 +67,7 @@ export default function EventDetailPage() {
   const [loading, setLoading]       = useState(true)
   const [guestsLoading, setGuestsLoading] = useState(false)
   const [showQR, setShowQR]             = useState(false)
+  const [showShare, setShowShare]       = useState(false)
   const [showModeration, setShowModeration] = useState(false)
   const [deleting, setDeleting]         = useState(false)
 
@@ -245,6 +247,9 @@ export default function EventDetailPage() {
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setShowQR(true)} className="btn-secondary flex items-center gap-2 text-sm">
             <QrCodeIcon className="w-4 h-4" /> QR Code
+          </button>
+          <button onClick={() => setShowShare(true)} className="btn-secondary flex items-center gap-2 text-sm">
+            <ShareIcon className="w-4 h-4" /> Share gallery
           </button>
           <Link href={uploadHref} className="btn-primary flex items-center gap-2 text-sm">
             <ArrowUpTrayIcon className="w-4 h-4" /> Upload photos
@@ -479,6 +484,16 @@ export default function EventDetailPage() {
           venue={event.venue}
           eventType={event.eventType}
           onClose={() => setShowQR(false)}
+        />
+      )}
+      {showShare && (
+        <ShareGalleryModal
+          eventId={id}
+          eventName={event.name}
+          eventStatus={event.status}
+          galleryToken={event.galleryToken}
+          onChange={galleryToken => setEvent(prev => prev && { ...prev, galleryToken })}
+          onClose={() => setShowShare(false)}
         />
       )}
       {showModeration && (

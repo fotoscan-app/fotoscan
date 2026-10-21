@@ -52,6 +52,7 @@ model Event {
   allowGuestDownload      Boolean        @default(true)
   eventType               String         @default("custom")
   coverPhotoKey           String?
+  galleryToken            String?        @unique // secret full-gallery share link; null = sharing off
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
   photos                  Photo[]
