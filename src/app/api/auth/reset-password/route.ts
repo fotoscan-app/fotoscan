@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
 
+const MAX_ATTEMPTS = 5
+
 const schema = z.object({
   email:    z.string().email(),
   otp:      z.string().length(6),
@@ -17,13 +19,26 @@ export async function POST(req: NextRequest) {
 
     const { email, otp, password } = parsed.data
 
+    // Look up the latest live code for this email (not by code), so wrong guesses
+    // can be counted — otherwise the 6-digit code could be brute-forced.
     const record = await db.passwordReset.findFirst({
-      where: { email, otp, used: false, expiresAt: { gt: new Date() } },
+      where: { email, used: false, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     })
 
     if (!record) {
       return NextResponse.json({ success: false, error: 'Invalid or expired OTP. Please request a new one.' }, { status: 400 })
+    }
+
+    if (record.otp !== otp) {
+      const attempts = record.attempts + 1
+      await db.passwordReset.update({ where: { id: record.id }, data: { attempts, used: attempts >= MAX_ATTEMPTS } })
+      return NextResponse.json({
+        success: false,
+        error: attempts >= MAX_ATTEMPTS
+          ? 'Too many wrong attempts. Please request a new OTP.'
+          : 'Incorrect OTP. Please try again.',
+      }, { status: 400 })
     }
 
     const passwordHash = await hashPassword(password)

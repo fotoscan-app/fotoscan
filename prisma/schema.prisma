@@ -133,6 +133,7 @@ model PasswordReset {
   id        String   @id @default(cuid())
   email     String
   otp       String
+  attempts  Int      @default(0) // wrong guesses; the code is burned after 5
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
