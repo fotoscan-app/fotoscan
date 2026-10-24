@@ -58,6 +58,8 @@ export default function BillingPage() {
 
   async function startCheckout(planId: string) {
     if (!user) return
+    const planName = PLANS.find(p => p.id === planId)?.name ?? planId
+    if (!confirm(`You are about to activate the ${planName} plan (${selectedCycle.label}).\n\nPlease note: once activated, this payment is NOT refundable.\n\nDo you want to continue?`)) return
     setUpgrading(planId)
 
     try {
@@ -86,8 +88,6 @@ export default function BillingPage() {
         setUpgrading(null)
         return
       }
-
-      const planName = PLANS.find(p => p.id === planId)?.name ?? planId
 
       const options = {
         key: d.data.keyId,
@@ -371,6 +371,10 @@ export default function BillingPage() {
 
       <p className="text-sm text-gray-400 mt-6 text-center">
         Payments processed securely by Razorpay. Cancel anytime.
+      </p>
+      <p className="text-sm text-amber-700 mt-2 text-center">
+        All payments are non-refundable once the plan is activated. See our{' '}
+        <a href="/refund-policy" target="_blank" className="underline">Refund &amp; Cancellation Policy</a>.
       </p>
     </div>
   )

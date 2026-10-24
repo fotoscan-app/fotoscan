@@ -293,11 +293,16 @@ export default function PricingPage() {
         </div>
 
         <p className="text-center text-sm text-gray-400">
-          All prices in INR · GST as applicable · Cancel anytime · No hidden fees
+          All prices in INR · GST as applicable · Cancel anytime · No hidden fees · Non-refundable once activated
         </p>
       </div>
 
       <footer className="border-t border-gray-100 py-8 text-center text-sm text-gray-400">
+        <div className="flex justify-center gap-6 mb-2">
+          <Link href="/terms"          className="hover:text-gray-600 transition-colors">Terms</Link>
+          <Link href="/privacy-policy" className="hover:text-gray-600 transition-colors">Privacy</Link>
+          <Link href="/refund-policy"  className="hover:text-gray-600 transition-colors">Refunds</Link>
+        </div>
         © {new Date().getFullYear()} QuickPik by Anss Studio Pvt. Ltd. All rights reserved.
       </footer>
     </div>

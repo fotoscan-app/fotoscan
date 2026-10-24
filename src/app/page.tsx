@@ -335,11 +335,14 @@ export default function LandingPage() {
             <Image src="/anss-studio-logo.png" alt="Anss Studio" width={120} height={40} className="object-contain bg-white rounded p-1" />
             <p className="text-xs mt-1 text-gray-400">By Anss Studio Pvt. Ltd.</p>
           </div>
-          <div className="flex gap-6 text-sm">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
             <a href="#features"     className="hover:text-white transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
             <Link href="/pricing"   className="hover:text-white transition-colors">Pricing</Link>
             <a href="#contact"      className="hover:text-white transition-colors">Contact</a>
+            <Link href="/terms"          className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/refund-policy"  className="hover:text-white transition-colors">Refunds</Link>
           </div>
           <p className="text-xs">© {new Date().getFullYear()} QuickPik. All rights reserved.</p>
         </div>
